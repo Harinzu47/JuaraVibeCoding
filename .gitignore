@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+
+# Environment Variables (Sangat Rahasia!)
+.env
+.env.local
+.env.*.local
+
+# Node / frontend (Jika dikompilasi atau diakses di root)
+node_modules/
+dist/
+.eslintcache
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
