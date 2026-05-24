@@ -13,24 +13,24 @@ export default function App() {
   const [chatHistory, setChatHistory] = useState(() => {
     return JSON.parse(localStorage.getItem('dp_chat_history')) || [];
   });
-  const [totalBelanja, setTotalBelanja] = useState(() => {
-    return parseInt(localStorage.getItem('dp_total_belanja')) || 0;
+  const [totalSpending, setTotalSpending] = useState(() => {
+    return parseInt(localStorage.getItem('dp_total_spending')) || 0;
   });
-  const [modalTerpakai, setModalTerpakai] = useState(() => {
-    return parseInt(localStorage.getItem('dp_modal_terpakai')) || 0;
+  const [usedCapital, setUsedCapital] = useState(() => {
+    return parseInt(localStorage.getItem('dp_used_capital')) || 0;
   });
-  const [hppUnit, setHppUnit] = useState(() => {
-    return parseInt(localStorage.getItem('dp_hpp_unit')) || 0;
+  const [cogsPerUnit, setCogsPerUnit] = useState(() => {
+    return parseInt(localStorage.getItem('dp_cogs_per_unit')) || 0;
   });
-  const [faseSaatIni, setFaseSaatIni] = useState(() => {
-    return localStorage.getItem('dp_fase_saat_ini') || 'PAGI_COSTING';
+  const [currentPhase, setCurrentPhase] = useState(() => {
+    return localStorage.getItem('dp_current_phase') || 'MORNING_COSTING';
   });
   const [healthStatus, setHealthStatus] = useState({
     gemini_configured: false,
     redis_connected: false
   });
 
-  // State tambahan untuk jualan sore sebelum disimpan
+  // Additional states for evening sales
   const [todayRevenue, setTodayRevenue] = useState(() => {
     return parseInt(localStorage.getItem('dp_today_revenue')) || 0;
   });
@@ -47,7 +47,7 @@ export default function App() {
     return localStorage.getItem('dp_today_breakeven') === 'true';
   });
 
-  // State Riwayat Penjualan (Dashboard)
+  // Saved History List state
   const [historyList, setHistoryList] = useState(() => {
     return JSON.parse(localStorage.getItem('dp_history')) || [];
   });
@@ -58,7 +58,7 @@ export default function App() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // State modal simpan hari ini (agar bisa dipicu dari sidebar)
+  // Quick save today states
   const [isSaveTodayOpen, setIsSaveTodayOpen] = useState(false);
   const [todaySessionName, setTodaySessionName] = useState('');
 
@@ -75,20 +75,20 @@ export default function App() {
   }, [chatHistory]);
 
   useEffect(() => {
-    localStorage.setItem('dp_total_belanja', totalBelanja.toString());
-  }, [totalBelanja]);
+    localStorage.setItem('dp_total_spending', totalSpending.toString());
+  }, [totalSpending]);
 
   useEffect(() => {
-    localStorage.setItem('dp_modal_terpakai', modalTerpakai.toString());
-  }, [modalTerpakai]);
+    localStorage.setItem('dp_used_capital', usedCapital.toString());
+  }, [usedCapital]);
 
   useEffect(() => {
-    localStorage.setItem('dp_hpp_unit', hppUnit.toString());
-  }, [hppUnit]);
+    localStorage.setItem('dp_cogs_per_unit', cogsPerUnit.toString());
+  }, [cogsPerUnit]);
 
   useEffect(() => {
-    localStorage.setItem('dp_fase_saat_ini', faseSaatIni);
-  }, [faseSaatIni]);
+    localStorage.setItem('dp_current_phase', currentPhase);
+  }, [currentPhase]);
 
   const fetchHealthStatus = async () => {
     try {
@@ -96,18 +96,20 @@ export default function App() {
       if (response.ok) {
         const data = await response.json();
         setHealthStatus({
-          gemini_configured: data.gemini_configured,
-          redis_connected: data.redis_connected
+          gemini_configured: data.components.gemini.configured,
+          redis_connected: data.components.redis.connected
         });
       }
     } catch (err) {
-      console.error("Gagal memuat status kesehatan API:", err);
+      console.error("Failed to load health status:", err);
     }
   };
 
   useEffect(() => {
-    fetchHealthStatus();
-  }, [isSettingsOpen]);
+    if (token) {
+      fetchHealthStatus();
+    }
+  }, [isSettingsOpen, token]);
 
   useEffect(() => {
     localStorage.setItem('dp_today_revenue', todayRevenue.toString());
@@ -150,8 +152,7 @@ export default function App() {
     setChatHistory(updatedHistory);
     setIsLoading(true);
 
-    // Menggunakan Vite Proxy (/api/chat)
-    const API_URL = '/api/chat';
+    const API_URL = '/api/chat/';
 
     try {
       const response = await fetch(API_URL, {
@@ -162,10 +163,10 @@ export default function App() {
         },
         body: JSON.stringify({
           message: messageText,
-          chat_history: chatHistory,
-          fase_saat_ini: faseSaatIni,
-          total_belanja: totalBelanja,
-          hpp_unit: hppUnit
+          chat_history: chatHistory.map(h => ({ role: h.role, content: h.content })),
+          current_phase: currentPhase,
+          total_spending: totalSpending,
+          cogs_per_unit: cogsPerUnit
         })
       });
 
@@ -173,39 +174,39 @@ export default function App() {
 
       if (!response.ok) {
         if (response.status === 401) {
-          setToken(''); // Auto logout on invalid token
-          throw new Error('Sesi kamu telah berakhir. Silakan login kembali.');
+          setToken(''); // Auto logout on token expiration
+          throw new Error('Your session has expired. Please log in again.');
         }
         const errData = await response.json();
-        throw new Error(errData.detail || 'Gagal terhubung dengan asisten.');
+        throw new Error(errData.detail || 'Failed to connect with assistant.');
       }
 
       const data = await response.json();
 
-      // Update metrik & fase dari balasan API
-      setTotalBelanja(data.total_belanja);
-      setModalTerpakai(data.modal_terpakai);
-      setHppUnit(data.hpp_unit);
-      setFaseSaatIni(data.fase_saat_ini);
+      // Update state metrics from response
+      setTotalSpending(data.total_spending);
+      setUsedCapital(data.used_capital);
+      setCogsPerUnit(data.cogs_per_unit);
+      setCurrentPhase(data.current_phase);
 
-      // Metrik sore (opsional)
-      if (data.total_pendapatan !== null && data.total_pendapatan !== undefined) {
-        setTodayRevenue(data.total_pendapatan);
+      // Optional evening metrics
+      if (data.total_revenue !== null && data.total_revenue !== undefined) {
+        setTodayRevenue(data.total_revenue);
       }
-      if (data.laba_bersih !== null && data.laba_bersih !== undefined) {
-        setTodayProfit(data.laba_bersih);
+      if (data.net_profit !== null && data.net_profit !== undefined) {
+        setTodayProfit(data.net_profit);
       }
-      if (data.porsi_terjual !== null && data.porsi_terjual !== undefined) {
-        setTodaySoldQty(data.porsi_terjual);
+      if (data.portions_sold !== null && data.portions_sold !== undefined) {
+        setTodaySoldQty(data.portions_sold);
       }
-      if (data.harga_jual !== null && data.harga_jual !== undefined) {
-        setTodayPricePerUnit(data.harga_jual);
+      if (data.selling_price !== null && data.selling_price !== undefined) {
+        setTodayPricePerUnit(data.selling_price);
       }
-      if (data.balik_modal !== null && data.balik_modal !== undefined) {
-        setTodayBreakeven(data.balik_modal);
+      if (data.break_even !== null && data.break_even !== undefined) {
+        setTodayBreakeven(data.break_even);
       }
 
-      // Simpan balasan AI
+      // Save AI Chat response
       setChatHistory((prev) => [...prev, { role: 'assistant', content: data.response }]);
 
     } catch (err) {
@@ -217,26 +218,26 @@ export default function App() {
     }
   };
 
-  // Reset Sesi Hari Ini
+  // Reset Today's Session
   const handleReset = () => {
     if (confirm('Apakah Ibu yakin ingin menghapus seluruh riwayat modal dan obrolan hari ini?')) {
       setChatHistory([]);
-      setTotalBelanja(0);
-      setModalTerpakai(0);
-      setHppUnit(0);
-      setFaseSaatIni('PAGI_COSTING');
+      setTotalSpending(0);
+      setUsedCapital(0);
+      setCogsPerUnit(0);
+      setCurrentPhase('MORNING_COSTING');
       setTodayRevenue(0);
       setTodayProfit(0);
       setTodaySoldQty(0);
       setTodayPricePerUnit(0);
       setTodayBreakeven(false);
       
-      // Bersihkan localStorage
+      // Clean local storage
       localStorage.removeItem('dp_chat_history');
-      localStorage.removeItem('dp_total_belanja');
-      localStorage.removeItem('dp_modal_terpakai');
-      localStorage.removeItem('dp_hpp_unit');
-      localStorage.removeItem('dp_fase_saat_ini');
+      localStorage.removeItem('dp_total_spending');
+      localStorage.removeItem('dp_used_capital');
+      localStorage.removeItem('dp_cogs_per_unit');
+      localStorage.removeItem('dp_current_phase');
       localStorage.removeItem('dp_today_revenue');
       localStorage.removeItem('dp_today_profit');
       localStorage.removeItem('dp_today_sold_qty');
@@ -245,10 +246,10 @@ export default function App() {
     }
   };
 
-  // Simpan Sesi Hari Ini ke Riwayat
+  // Archive session to dashboard list
   const handleSaveSession = (itemName) => {
     const finalRevenue = todayRevenue || (todaySoldQty * todayPricePerUnit);
-    const finalProfit = todayProfit || (finalRevenue - (todaySoldQty * hppUnit));
+    const finalProfit = todayProfit || (finalRevenue - (todaySoldQty * cogsPerUnit));
     
     const newRecord = {
       id: Date.now().toString(),
@@ -259,37 +260,37 @@ export default function App() {
         day: 'numeric' 
       }),
       itemName: itemName || "Dagangan Hari Ini",
-      totalBelanja: totalBelanja,
-      modalTerpakai: modalTerpakai,
-      hppUnit: hppUnit,
-      porsiTerjual: todaySoldQty,
-      hargaJual: todayPricePerUnit,
-      totalPendapatan: finalRevenue,
-      labaBersih: finalProfit,
-      isBreakeven: todayBreakeven || (finalRevenue >= totalBelanja)
+      totalSpending: totalSpending,
+      usedCapital: usedCapital,
+      cogsPerUnit: cogsPerUnit,
+      portionsSold: todaySoldQty,
+      sellingPrice: todayPricePerUnit,
+      totalRevenue: finalRevenue,
+      netProfit: finalProfit,
+      breakEven: todayBreakeven || (finalRevenue >= totalSpending)
     };
 
     const updatedHistory = [...historyList, newRecord];
     setHistoryList(updatedHistory);
 
-    // Reset today's stats
+    // Reset today's inputs
     setChatHistory([]);
-    setTotalBelanja(0);
-    setModalTerpakai(0);
-    setHppUnit(0);
-    setFaseSaatIni('PAGI_COSTING');
+    setTotalSpending(0);
+    setUsedCapital(0);
+    setCogsPerUnit(0);
+    setCurrentPhase('MORNING_COSTING');
     setTodayRevenue(0);
     setTodayProfit(0);
     setTodaySoldQty(0);
     setTodayPricePerUnit(0);
     setTodayBreakeven(false);
 
-    // Hapus obrolan dari storage
+    // Remove chat logs from localStorage
     localStorage.removeItem('dp_chat_history');
-    localStorage.removeItem('dp_total_belanja');
-    localStorage.removeItem('dp_modal_terpakai');
-    localStorage.removeItem('dp_hpp_unit');
-    localStorage.removeItem('dp_fase_saat_ini');
+    localStorage.removeItem('dp_total_spending');
+    localStorage.removeItem('dp_used_capital');
+    localStorage.removeItem('dp_cogs_per_unit');
+    localStorage.removeItem('dp_current_phase');
     localStorage.removeItem('dp_today_revenue');
     localStorage.removeItem('dp_today_profit');
     localStorage.removeItem('dp_today_sold_qty');
@@ -299,13 +300,13 @@ export default function App() {
     alert("Laporan penjualan hari ini berhasil disimpan ke Riwayat!");
   };
 
-  // Tambah Transaksi Manual
+  // Manual Transaction Add Handler
   const handleAddManualTransaction = (record) => {
     const updatedHistory = [...historyList, record];
     setHistoryList(updatedHistory);
   };
 
-  // Hapus Satu Item Riwayat
+  // Delete single history log
   const handleDeleteHistoryItem = (id) => {
     if (confirm("Apakah Ibu yakin ingin menghapus catatan transaksi ini?")) {
       const updatedHistory = historyList.filter(item => item.id !== id);
@@ -313,15 +314,13 @@ export default function App() {
     }
   };
 
-  // Hapus Seluruh Riwayat
+  // Clear all saved history logs
   const handleClearHistory = () => {
     if (confirm("Apakah Ibu yakin ingin menghapus seluruh riwayat penjualan? Tindakan ini tidak dapat dibatalkan!")) {
       setHistoryList([]);
       localStorage.removeItem('dp_history');
     }
   };
-
-
 
   const handleSaveTodaySubmit = (e) => {
     e.preventDefault();
@@ -338,11 +337,11 @@ export default function App() {
     <div className="app-container">
       {/* Sidebar Component */}
       <Sidebar
-        totalBelanja={totalBelanja}
-        modalTerpakai={modalTerpakai}
-        hppUnit={hppUnit}
-        faseSaatIni={faseSaatIni}
-        onChangeFase={setFaseSaatIni}
+        totalSpending={totalSpending}
+        usedCapital={usedCapital}
+        cogsPerUnit={cogsPerUnit}
+        currentPhase={currentPhase}
+        onChangePhase={setCurrentPhase}
         onReset={handleReset}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -352,11 +351,11 @@ export default function App() {
         onOpenSaveTodayModal={() => setIsSaveTodayOpen(true)}
       />
 
-      {/* Main Content Area: Chat or Dashboard */}
+      {/* Main Content Area */}
       {activeTab === 'chat' ? (
         <ChatArea
           chatHistory={chatHistory}
-          faseSaatIni={faseSaatIni}
+          currentPhase={currentPhase}
           onSendMessage={handleSendMessage}
           isLoading={isLoading}
           toggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
@@ -369,16 +368,16 @@ export default function App() {
           onAddManualTransaction={handleAddManualTransaction}
           onSaveTodaySession={handleSaveSession}
           todayData={{
-            totalBelanja,
-            modalTerpakai,
-            hppUnit,
-            totalPendapatan: todayRevenue,
-            labaBersih: todayProfit,
-            porsiTerjual: todaySoldQty,
-            hargaJual: todayPricePerUnit,
-            balikModal: todayBreakeven
+            totalSpending,
+            usedCapital,
+            cogsPerUnit,
+            totalRevenue: todayRevenue,
+            netProfit: todayProfit,
+            portionsSold: todaySoldQty,
+            sellingPrice: todayPricePerUnit,
+            breakEven: todayBreakeven
           }}
-          faseSaatIni={faseSaatIni}
+          currentPhase={currentPhase}
         />
       )}
 
@@ -423,7 +422,7 @@ export default function App() {
         onLogout={() => setToken('')}
       />
 
-      {/* Sidebar Quick-save Dialog Modal */}
+      {/* Quick Save Modal */}
       {isSaveTodayOpen && (
         <div className="modal-backdrop">
           <div className="modal-card">

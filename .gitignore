@@ -2,22 +2,82 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# Virtual Environments
 .venv/
 venv/
 ENV/
 env/
+ENV/system/
+ENV/bin/
 
-# Environment Variables (Sangat Rahasia!)
-.env
-.env.local
-.env.*.local
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.coverage.*
+.nosexy
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.ruamel_yaml_directory/
 
-# Node / frontend (Jika dikompilasi atau diakses di root)
+# Database & SQLite/Postgres temp
+*.db
+*.sqlite3
+*.local
+
+# Node.js & Frontend Build Artifacts
 node_modules/
-dist/
+frontend/dist/
+frontend/node_modules/
 .eslintcache
+.parcel-cache
+.cache
+.vite
 
-# OS files
+# IDEs and Editors
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*~
+
+# OS Files
 .DS_Store
 Thumbs.db
 desktop.ini
+Ehthumbs.db
+
+# Docker
+docker-compose.override.yml

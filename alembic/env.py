@@ -5,8 +5,9 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from alembic import context
 
 # Import Base dan semua models agar Alembic dapat mendeteksi tabel
-from database import Base, DATABASE_URL
-import models  # noqa: F401 — wajib agar metadata ter-register
+from app.db.base import Base
+from app.core.config import settings
+import app.models  # noqa: F401
 
 # Alembic Config object
 config = context.config
@@ -21,7 +22,7 @@ target_metadata = Base.metadata
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode — generate SQL tanpa koneksi aktif."""
-    url = DATABASE_URL
+    url = settings.DATABASE_URL
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -46,7 +47,7 @@ def do_run_migrations(connection):
 
 async def run_async_migrations() -> None:
     """Run migrations menggunakan async engine (wajib untuk asyncpg)."""
-    connectable = create_async_engine(DATABASE_URL, echo=False)
+    connectable = create_async_engine(settings.DATABASE_URL, echo=False)
 
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)

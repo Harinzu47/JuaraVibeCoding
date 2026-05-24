@@ -12,11 +12,11 @@ import {
 import MetricCard from './MetricCard';
 
 export default function Sidebar({
-  totalBelanja,
-  modalTerpakai,
-  hppUnit,
-  faseSaatIni,
-  onChangeFase,
+  totalSpending,
+  usedCapital,
+  cogsPerUnit,
+  currentPhase,
+  onChangePhase,
   onReset,
   activeTab,
   setActiveTab,
@@ -25,10 +25,6 @@ export default function Sidebar({
   toggleMobileSidebar,
   onOpenSaveTodayModal
 }) {
-  const formatRp = (val) => {
-    return "Rp " + (val || 0).toLocaleString('id-ID');
-  };
-
   return (
     <>
       {/* Mobile Overlay */}
@@ -49,9 +45,9 @@ export default function Sidebar({
 
         {/* Metrics Cards Container */}
         <div className="metrics-container">
-          <MetricCard title="Total Belanja" value={totalBelanja} type="primary" />
-          <MetricCard title="Modal Kepake" value={modalTerpakai} type="secondary" />
-          <MetricCard title="HPP per Porsi" value={hppUnit} type="tertiary" />
+          <MetricCard title="Total Belanja" value={totalSpending} type="primary" />
+          <MetricCard title="Modal Kepake" value={usedCapital} type="secondary" />
+          <MetricCard title="HPP per Porsi" value={cogsPerUnit} type="tertiary" />
 
           <hr className="divider" />
 
@@ -61,21 +57,21 @@ export default function Sidebar({
             <div className="phase-toggle-container">
               <button 
                 type="button"
-                className={`phase-toggle-btn ${faseSaatIni === 'PAGI_COSTING' ? 'active' : ''}`}
-                onClick={() => onChangeFase('PAGI_COSTING')}
+                className={`phase-toggle-btn ${currentPhase === 'MORNING_COSTING' ? 'active' : ''}`}
+                onClick={() => onChangePhase('MORNING_COSTING')}
               >
                 <Sun size={14} />
                 <span>🌅 Pagi</span>
               </button>
               <button 
                 type="button"
-                className={`phase-toggle-btn ${faseSaatIni === 'SORE_REVENUE' ? 'active' : ''}`}
+                className={`phase-toggle-btn ${currentPhase === 'EVENING_SALES' ? 'active' : ''}`}
                 onClick={() => {
-                  if (hppUnit <= 0) {
+                  if (cogsPerUnit <= 0) {
                     alert("Hitung modal belanja pagi dan HPP dulu ya Bu di obrolan!");
                     return;
                   }
-                  onChangeFase('SORE_REVENUE');
+                  onChangePhase('EVENING_SALES');
                 }}
               >
                 <Sunset size={14} />
@@ -88,7 +84,7 @@ export default function Sidebar({
 
           {/* Quick Actions */}
           <div className="flex flex-col gap-sm">
-            {totalBelanja > 0 && (
+            {totalSpending > 0 && (
               <button 
                 className="btn btn-primary" 
                 onClick={() => {

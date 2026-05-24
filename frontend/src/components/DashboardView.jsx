@@ -9,8 +9,7 @@ import {
   Package, 
   CheckCircle, 
   XCircle, 
-  AlertCircle,
-  FileSpreadsheet
+  AlertCircle
 } from 'lucide-react';
 
 export default function DashboardView({
@@ -20,7 +19,7 @@ export default function DashboardView({
   onAddManualTransaction,
   onSaveTodaySession,
   todayData = {},
-  faseSaatIni
+  currentPhase
 }) {
   // Local state for Modals
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
@@ -29,19 +28,19 @@ export default function DashboardView({
   // Fields for manual entry
   const [manualName, setManualName] = useState('');
   const [manualDate, setManualDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [manualTotalBelanja, setManualTotalBelanja] = useState('');
-  const [manualModalTerpakai, setManualModalTerpakai] = useState('');
-  const [manualHppUnit, setManualHppUnit] = useState('');
-  const [manualPorsiTerjual, setManualPorsiTerjual] = useState('');
-  const [manualHargaJual, setManualHargaJual] = useState('');
+  const [manualTotalSpending, setManualTotalSpending] = useState('');
+  const [manualUsedCapital, setManualUsedCapital] = useState('');
+  const [manualCogsPerUnit, setManualCogsPerUnit] = useState('');
+  const [manualPortionsSold, setManualPortionsSold] = useState('');
+  const [manualSellingPrice, setManualSellingPrice] = useState('');
 
   // Field for naming today's session
   const [todaySessionName, setTodaySessionName] = useState('');
 
-  // 1. CALCULATE KIP/KPI METRICS
-  const totalRevenue = historyList.reduce((sum, item) => sum + (item.totalPendapatan || 0), 0);
-  const totalProfit = historyList.reduce((sum, item) => sum + (item.labaBersih || 0), 0);
-  const breakevenDaysCount = historyList.filter(item => item.isBreakeven).length;
+  // 1. CALCULATE KPI METRICS
+  const totalRevenue = historyList.reduce((sum, item) => sum + (item.totalRevenue || 0), 0);
+  const totalProfit = historyList.reduce((sum, item) => sum + (item.netProfit || 0), 0);
+  const breakevenDaysCount = historyList.filter(item => item.breakEven).length;
   const bepRate = historyList.length > 0 ? Math.round((breakevenDaysCount / historyList.length) * 100) : 0;
 
   // 2. EXPORT CSV UTILITY
@@ -61,14 +60,14 @@ export default function DashboardView({
         item.id,
         `"${item.date}"`,
         `"${item.itemName}"`,
-        item.totalBelanja,
-        item.modalTerpakai,
-        item.hppUnit,
-        item.porsiTerjual,
-        item.hargaJual,
-        item.totalPendapatan,
-        item.labaBersih,
-        item.isBreakeven ? "YA" : "TIDAK"
+        item.totalSpending,
+        item.usedCapital,
+        item.cogsPerUnit,
+        item.portionsSold,
+        item.sellingPrice,
+        item.totalRevenue,
+        item.netProfit,
+        item.breakEven ? "YA" : "TIDAK"
       ].join(",");
       csvContent += row + "\n";
     });
@@ -90,14 +89,14 @@ export default function DashboardView({
       return;
     }
 
-    const spent = parseInt(manualTotalBelanja) || 0;
-    const used = parseInt(manualModalTerpakai) || 0;
-    const hpp = parseInt(manualHppUnit) || 0;
-    const sold = parseInt(manualPorsiTerjual) || 0;
-    const price = parseInt(manualHargaJual) || 0;
+    const spent = parseInt(manualTotalSpending) || 0;
+    const used = parseInt(manualUsedCapital) || 0;
+    const cogs = parseInt(manualCogsPerUnit) || 0;
+    const sold = parseInt(manualPortionsSold) || 0;
+    const price = parseInt(manualSellingPrice) || 0;
     
     const revenue = sold * price;
-    const profit = revenue - (sold * hpp);
+    const profit = revenue - (sold * cogs);
 
     const newRecord = {
       id: Date.now().toString(),
@@ -108,25 +107,25 @@ export default function DashboardView({
         day: 'numeric' 
       }),
       itemName: manualName,
-      totalBelanja: spent,
-      modalTerpakai: used,
-      hppUnit: hpp,
-      porsiTerjual: sold,
-      hargaJual: price,
-      totalPendapatan: revenue,
-      labaBersih: profit,
-      isBreakeven: revenue >= spent
+      totalSpending: spent,
+      usedCapital: used,
+      cogsPerUnit: cogs,
+      portionsSold: sold,
+      sellingPrice: price,
+      totalRevenue: revenue,
+      netProfit: profit,
+      breakEven: revenue >= spent
     };
 
     onAddManualTransaction(newRecord);
     
     // Clear and close
     setManualName('');
-    setManualTotalBelanja('');
-    setManualModalTerpakai('');
-    setManualHppUnit('');
-    setManualPorsiTerjual('');
-    setManualHargaJual('');
+    setManualTotalSpending('');
+    setManualUsedCapital('');
+    setManualCogsPerUnit('');
+    setManualPortionsSold('');
+    setManualSellingPrice('');
     setIsManualModalOpen(false);
   };
 
@@ -139,17 +138,17 @@ export default function DashboardView({
     setIsSaveTodayModalOpen(false);
   };
 
-  // Check if today has unsaved data (Total Belanja > 0)
-  const hasUnsavedTodayData = todayData.totalBelanja > 0;
+  // Check if today has unsaved data (Total Spending > 0)
+  const hasUnsavedTodayData = todayData.totalSpending > 0;
 
-  // Format currency helpers
+  // Format currency helper
   const formatRp = (num) => {
     return "Rp " + (num || 0).toLocaleString('id-ID');
   };
 
   // Get last 7 days for the CSS chart
   const recentItems = [...historyList].slice(-7);
-  const maxProfitForChart = Math.max(...recentItems.map(item => Math.abs(item.labaBersih || 0)), 10000);
+  const maxProfitForChart = Math.max(...recentItems.map(item => Math.abs(item.netProfit || 0)), 10000);
 
   return (
     <div className="dashboard-container">
@@ -214,7 +213,7 @@ export default function DashboardView({
             <AlertCircle size={24} className="text-primary" />
             <div>
               <h4>Ada transaksi obrolan hari ini yang belum disimpan!</h4>
-              <p>Belanja: {formatRp(todayData.totalBelanja)} | HPP: {formatRp(todayData.hppUnit)} | Laba: {todayData.labaBersih !== null ? formatRp(todayData.labaBersih) : 'Belum input jualan sore'}</p>
+              <p>Belanja: {formatRp(todayData.totalSpending)} | HPP: {formatRp(todayData.cogsPerUnit)} | Laba: {todayData.netProfit !== null ? formatRp(todayData.netProfit) : 'Belum input jualan sore'}</p>
             </div>
           </div>
           <button className="btn btn-primary btn-sm" onClick={() => setIsSaveTodayModalOpen(true)}>
@@ -234,8 +233,8 @@ export default function DashboardView({
             </div>
           ) : (
             <div className="chart-bar-container">
-              {recentItems.map((item, index) => {
-                const profit = item.labaBersih || 0;
+              {recentItems.map((item) => {
+                const profit = item.netProfit || 0;
                 const isLoss = profit < 0;
                 const heightPercentage = Math.min(Math.round((Math.abs(profit) / maxProfitForChart) * 100), 100) || 5;
                 return (
@@ -292,20 +291,20 @@ export default function DashboardView({
                     <tr key={item.id}>
                       <td className="font-bold">{item.itemName}</td>
                       <td className="text-muted text-sm">{item.date.replace(/Hari|Senin|Selasa|Rabu|Kamis|Jumat|Sabtu|Minggu,?\s*/g, '')}</td>
-                      <td>{formatRp(item.totalBelanja)}</td>
-                      <td>{formatRp(item.totalPendapatan)}</td>
-                      <td className={item.labaBersih >= 0 ? "text-teal font-bold" : "text-red-600 font-bold"}>
-                        {formatRp(item.labaBersih)}
+                      <td>{formatRp(item.totalSpending)}</td>
+                      <td>{formatRp(item.totalRevenue)}</td>
+                      <td className={item.netProfit >= 0 ? "text-teal font-bold" : "text-red-600 font-bold"}>
+                        {formatRp(item.netProfit)}
                       </td>
                       <td>
-                        {item.isBreakeven ? (
-                          <span className="badge badge-success flex items-center gap-xs">
-                            <CheckCircle size={12} /> Balik Modal
-                          </span>
+                        {item.breakEven ? (
+                           <span className="badge badge-success flex items-center gap-xs">
+                             <CheckCircle size={12} /> Balik Modal
+                           </span>
                         ) : (
-                          <span className="badge badge-warning flex items-center gap-xs">
-                            <XCircle size={12} /> Belum BEP
-                          </span>
+                           <span className="badge badge-warning flex items-center gap-xs">
+                             <XCircle size={12} /> Belum BEP
+                           </span>
                         )}
                       </td>
                       <td>
@@ -395,8 +394,8 @@ export default function DashboardView({
                     <input 
                       type="number" 
                       className="form-input" 
-                      value={manualTotalBelanja} 
-                      onChange={e => setManualTotalBelanja(e.target.value)} 
+                      value={manualTotalSpending} 
+                      onChange={e => setManualTotalSpending(e.target.value)} 
                       placeholder="60000"
                     />
                   </div>
@@ -405,8 +404,8 @@ export default function DashboardView({
                     <input 
                       type="number" 
                       className="form-input" 
-                      value={manualModalTerpakai} 
-                      onChange={e => setManualModalTerpakai(e.target.value)} 
+                      value={manualUsedCapital} 
+                      onChange={e => setManualUsedCapital(e.target.value)} 
                       placeholder="40000"
                     />
                   </div>
@@ -417,8 +416,8 @@ export default function DashboardView({
                     <input 
                       type="number" 
                       className="form-input" 
-                      value={manualHppUnit} 
-                      onChange={e => setManualHppUnit(e.target.value)} 
+                      value={manualCogsPerUnit} 
+                      onChange={e => setManualCogsPerUnit(e.target.value)} 
                       placeholder="2000"
                     />
                   </div>
@@ -429,8 +428,8 @@ export default function DashboardView({
                     <input 
                       type="number" 
                       className="form-input" 
-                      value={manualPorsiTerjual} 
-                      onChange={e => setManualPorsiTerjual(e.target.value)} 
+                      value={manualPortionsSold} 
+                      onChange={e => setManualPortionsSold(e.target.value)} 
                       placeholder="18"
                     />
                   </div>
@@ -439,8 +438,8 @@ export default function DashboardView({
                     <input 
                       type="number" 
                       className="form-input" 
-                      value={manualHargaJual} 
-                      onChange={e => setManualHargaJual(e.target.value)} 
+                      value={manualSellingPrice} 
+                      onChange={e => setManualSellingPrice(e.target.value)} 
                       placeholder="5000"
                     />
                   </div>

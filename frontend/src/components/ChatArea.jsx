@@ -55,7 +55,7 @@ const parseMarkdown = (text) => {
 
 export default function ChatArea({
   chatHistory,
-  faseSaatIni,
+  currentPhase,
   onSendMessage,
   isLoading,
   toggleMobileSidebar
@@ -131,13 +131,13 @@ export default function ChatArea({
   };
 
   const getPlaceholder = () => {
-    return faseSaatIni === 'PAGI_COSTING'
+    return currentPhase === 'MORNING_COSTING'
       ? 'Ketik belanjaan atau modal pagi di sini...'
       : 'Lapor jualan sore di sini...';
   };
 
   const getExampleText = () => {
-    return faseSaatIni === 'PAGI_COSTING'
+    return currentPhase === 'MORNING_COSTING'
       ? 'Contoh pagi: "Beli ayam 2kg 70rb, bawang merah 1/4kg 10rb. Jadi 20 porsi."'
       : 'Contoh sore: "Laku 18 porsi harga jual 10rb per porsi."';
   };

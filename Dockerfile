@@ -50,7 +50,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 # Jalankan migration lalu start Uvicorn
 # Shell form agar $PORT ter-expand dengan benar
 CMD alembic upgrade head && \
-    uvicorn main:app \
+    uvicorn app.main:app \
     --host 0.0.0.0 \
     --port $PORT \
     --workers 1 \
