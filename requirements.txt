@@ -1,0 +1,22 @@
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+google-genai
+pydantic>=2.7.0
+pydantic[email]>=2.7.0
+starlette>=0.37.0
+redis[asyncio]>=5.0.0
+structlog>=24.0.0
+
+# Sprint 2: Database & Auth
+sqlalchemy[asyncio]>=2.0.0
+asyncpg>=0.29.0
+alembic>=1.13.0
+bcrypt>=4.0.1,<5.0.0
+python-jose[cryptography]>=3.3.0
+python-multipart>=0.0.9
+email-validator>=2.0.0
+
+# Sprint 3: PDF Export
+weasyprint>=62.0
+jinja2>=3.1.0
+

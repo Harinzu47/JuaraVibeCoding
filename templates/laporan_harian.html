@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @page {
+      size: A4;
+      margin: 2cm 2.5cm;
+    }
+
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      font-size: 11pt;
+      color: #2d2d2d;
+      line-height: 1.6;
+    }
+
+    .header {
+      border-bottom: 3px solid #F97316;
+      padding-bottom: 12px;
+      margin-bottom: 24px;
+    }
+
+    .header h1 {
+      font-size: 22pt;
+      font-weight: 700;
+      color: #F97316;
+      margin: 0 0 4px;
+    }
+
+    .header .subtitle {
+      font-size: 10pt;
+      color: #6b6b6b;
+    }
+
+    .meta {
+      font-size: 10pt;
+      color: #6b6b6b;
+      margin-bottom: 28px;
+    }
+
+    .section-title {
+      font-size: 13pt;
+      font-weight: 600;
+      color: #1a1a1a;
+      border-left: 4px solid #F97316;
+      padding-left: 10px;
+      margin: 28px 0 14px;
+    }
+
+    .metric-grid {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 8px;
+    }
+
+    .metric-grid td {
+      width: 33%;
+      padding: 0 8px 0 0;
+      vertical-align: top;
+    }
+
+    .metric-card {
+      background: #fafafa;
+      border: 1px solid #e8e8e8;
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+
+    .metric-card .label {
+      font-size: 9pt;
+      color: #888;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .metric-card .value {
+      font-size: 14pt;
+      font-weight: 700;
+      color: #1a1a1a;
+    }
+
+    .metric-card.highlight .value {
+      color: #16a34a;
+    }
+
+    .metric-card.danger .value {
+      color: #dc2626;
+    }
+
+    .status-row {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+    }
+
+    .status-row td {
+      padding: 0 8px 0 0;
+      vertical-align: middle;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 5px 14px;
+      border-radius: 99px;
+      font-size: 10pt;
+      font-weight: 600;
+    }
+
+    .status-badge.profit {
+      background: #dcfce7;
+      color: #15803d;
+    }
+
+    .status-badge.loss {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .chat-log {
+      margin-top: 8px;
+    }
+
+    .chat-message {
+      margin-bottom: 12px;
+      padding: 10px 14px;
+      border-radius: 8px;
+    }
+
+    .chat-message.user {
+      background: #fff7ed;
+      border-left: 3px solid #F97316;
+    }
+
+    .chat-message.assistant {
+      background: #f0fdf4;
+      border-left: 3px solid #22c55e;
+    }
+
+    .chat-message .role {
+      font-size: 9pt;
+      font-weight: 600;
+      color: #6b6b6b;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+
+    .chat-message .content {
+      font-size: 10.5pt;
+      color: #2d2d2d;
+      white-space: pre-wrap;
+    }
+
+    .chat-message .time {
+      font-size: 8.5pt;
+      color: #aaa;
+      margin-top: 4px;
+      text-align: right;
+    }
+
+    .footer {
+      margin-top: 40px;
+      border-top: 1px solid #e8e8e8;
+      padding-top: 12px;
+      font-size: 8.5pt;
+      color: #aaa;
+      text-align: center;
+    }
+
+    .no-data {
+      font-size: 10pt;
+      color: #aaa;
+      font-style: italic;
+      padding: 14px 0;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>DapurProfit AI</h1>
+    <div class="subtitle">Laporan Finansial Harian</div>
+  </div>
+
+  <div class="meta">
+    Tanggal: <strong>{{ session_date }}</strong> &nbsp;&middot;&nbsp;
+    Dibuat: {{ generated_at }} &nbsp;&middot;&nbsp;
+    Pengguna: {{ user_email }}
+  </div>
+
+  <!-- Ringkasan Modal -->
+  <div class="section-title">Ringkasan Modal</div>
+  <table class="metric-grid">
+    <tr>
+      <td>
+        <div class="metric-card">
+          <div class="label">Total Belanja</div>
+          <div class="value">{{ total_belanja }}</div>
+        </div>
+      </td>
+      <td>
+        <div class="metric-card">
+          <div class="label">Modal Terpakai</div>
+          <div class="value">{{ modal_terpakai }}</div>
+        </div>
+      </td>
+      <td>
+        <div class="metric-card">
+          <div class="label">HPP per Porsi</div>
+          <div class="value">{{ hpp_unit }}</div>
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Ringkasan Penjualan (hanya tampil jika fase sore) -->
+  {% if has_revenue_data %}
+  <div class="section-title">Ringkasan Penjualan</div>
+  <table class="metric-grid">
+    <tr>
+      <td>
+        <div class="metric-card">
+          <div class="label">Porsi Terjual</div>
+          <div class="value">{{ porsi_terjual }} porsi</div>
+        </div>
+      </td>
+      <td>
+        <div class="metric-card">
+          <div class="label">Harga Jual / Porsi</div>
+          <div class="value">{{ harga_jual }}</div>
+        </div>
+      </td>
+      <td>
+        <div class="metric-card">
+          <div class="label">Total Pendapatan</div>
+          <div class="value">{{ total_pendapatan }}</div>
+        </div>
+      </td>
+    </tr>
+  </table>
+  <table class="status-row">
+    <tr>
+      <td style="width:33%">
+        <div class="metric-card {% if laba_bersih_raw >= 0 %}highlight{% else %}danger{% endif %}">
+          <div class="label">Laba Bersih</div>
+          <div class="value">{{ laba_bersih }}</div>
+        </div>
+      </td>
+      <td style="width:67%; padding-left: 16px; vertical-align: middle;">
+        Status:&nbsp;
+        <span class="status-badge {% if balik_modal %}profit{% else %}loss{% endif %}">
+          {% if balik_modal %}Balik Modal{% else %}Belum Balik Modal{% endif %}
+        </span>
+      </td>
+    </tr>
+  </table>
+  {% else %}
+  <div class="section-title">Ringkasan Penjualan</div>
+  <div class="no-data">Data penjualan belum dicatat (fase sore belum dimulai).</div>
+  {% endif %}
+
+  <!-- Riwayat Percakapan -->
+  <div class="section-title">Riwayat Percakapan</div>
+  {% if messages %}
+  <div class="chat-log">
+    {% for msg in messages %}
+    <div class="chat-message {{ msg.role }}">
+      <div class="role">{{ 'Ibu' if msg.role == 'user' else 'DapurProfit AI' }}</div>
+      <div class="content">{{ msg.content }}</div>
+      <div class="time">{{ msg.created_at }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="no-data">Belum ada percakapan pada hari ini.</div>
+  {% endif %}
+
+  <div class="footer">
+    Laporan ini dibuat otomatis oleh DapurProfit AI &nbsp;&middot;&nbsp;
+    Untuk keperluan pencatatan internal UMKM &nbsp;&middot;&nbsp;
+    {{ generated_at }}
+  </div>
+
+</body>
+</html>

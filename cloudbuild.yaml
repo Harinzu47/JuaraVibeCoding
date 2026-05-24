@@ -1,0 +1,60 @@
+steps:
+  # Step 1: Build image Docker dengan cache dari latest
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--tag'
+      - 'gcr.io/$PROJECT_ID/dapurprofit-ai:$COMMIT_SHA'
+      - '--tag'
+      - 'gcr.io/$PROJECT_ID/dapurprofit-ai:latest'
+      - '--cache-from'
+      - 'gcr.io/$PROJECT_ID/dapurprofit-ai:latest'
+      - '.'
+
+  # Step 2: Push semua tags ke Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '--all-tags'
+      - 'gcr.io/$PROJECT_ID/dapurprofit-ai'
+
+  # Step 3: Deploy ke Cloud Run (asia-southeast2 = Jakarta)
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'dapurprofit-ai'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/dapurprofit-ai:$COMMIT_SHA'
+      - '--region'
+      - 'asia-southeast2'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--min-instances'
+      - '0'
+      - '--max-instances'
+      - '10'
+      - '--memory'
+      - '512Mi'
+      - '--cpu'
+      - '1'
+      - '--timeout'
+      - '60'
+      - '--concurrency'
+      - '80'
+      - '--set-env-vars'
+      - 'ENVIRONMENT=production'
+      # PENTING: Secrets (GEMINI_API_KEY, DATABASE_URL, JWT_SECRET_KEY, REDIS_URL)
+      # TIDAK diset di sini — set via Secret Manager:
+      # gcloud run services update dapurprofit-ai \
+      #   --set-secrets="GEMINI_API_KEY=gemini-api-key:latest,DATABASE_URL=db-url:latest,
+      #                  JWT_SECRET_KEY=jwt-secret:latest,REDIS_URL=redis-url:latest" \
+      #   --region asia-southeast2
+
+images:
+  - 'gcr.io/$PROJECT_ID/dapurprofit-ai'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

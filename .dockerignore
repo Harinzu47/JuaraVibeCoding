@@ -1,0 +1,16 @@
+.git
+.gitignore
+.env
+.env.*
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+.mypy_cache
+alembic/versions/*.py
+*.md
+.venv
+venv
+node_modules
+frontend/node_modules
+frontend/.vite

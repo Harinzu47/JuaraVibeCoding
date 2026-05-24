@@ -4,6 +4,7 @@ import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
 import DashboardView from './components/DashboardView';
 import SettingsModal from './components/SettingsModal';
+import Login from './components/Login';
 
 export default function App() {
   // =====================================================================
@@ -24,8 +25,9 @@ export default function App() {
   const [faseSaatIni, setFaseSaatIni] = useState(() => {
     return localStorage.getItem('dp_fase_saat_ini') || 'PAGI_COSTING';
   });
-  const [apiKey, setApiKey] = useState(() => {
-    return localStorage.getItem('dp_gemini_api_key') || '';
+  const [healthStatus, setHealthStatus] = useState({
+    gemini_configured: false,
+    redis_connected: false
   });
 
   // State tambahan untuk jualan sore sebelum disimpan
@@ -60,6 +62,11 @@ export default function App() {
   const [isSaveTodayOpen, setIsSaveTodayOpen] = useState(false);
   const [todaySessionName, setTodaySessionName] = useState('');
 
+  // JWT Token State
+  const [token, setToken] = useState(() => {
+    return localStorage.getItem('dp_token') || '';
+  });
+
   // =====================================================================
   // 2. STATE SAVE EFFECT
   // =====================================================================
@@ -83,9 +90,24 @@ export default function App() {
     localStorage.setItem('dp_fase_saat_ini', faseSaatIni);
   }, [faseSaatIni]);
 
+  const fetchHealthStatus = async () => {
+    try {
+      const response = await fetch('/api/health');
+      if (response.ok) {
+        const data = await response.json();
+        setHealthStatus({
+          gemini_configured: data.gemini_configured,
+          redis_connected: data.redis_connected
+        });
+      }
+    } catch (err) {
+      console.error("Gagal memuat status kesehatan API:", err);
+    }
+  };
+
   useEffect(() => {
-    localStorage.setItem('dp_gemini_api_key', apiKey);
-  }, [apiKey]);
+    fetchHealthStatus();
+  }, [isSettingsOpen]);
 
   useEffect(() => {
     localStorage.setItem('dp_today_revenue', todayRevenue.toString());
@@ -111,6 +133,14 @@ export default function App() {
     localStorage.setItem('dp_history', JSON.stringify(historyList));
   }, [historyList]);
 
+  useEffect(() => {
+    if (token) {
+      localStorage.setItem('dp_token', token);
+    } else {
+      localStorage.removeItem('dp_token');
+    }
+  }, [token]);
+
   // =====================================================================
   // 3. API CLIENT CALLS & ACTIONS
   // =====================================================================
@@ -127,21 +157,25 @@ export default function App() {
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           message: messageText,
           chat_history: chatHistory,
           fase_saat_ini: faseSaatIni,
           total_belanja: totalBelanja,
-          hpp_unit: hppUnit,
-          api_key_override: apiKey || null
+          hpp_unit: hppUnit
         })
       });
 
       setIsLoading(false);
 
       if (!response.ok) {
+        if (response.status === 401) {
+          setToken(''); // Auto logout on invalid token
+          throw new Error('Sesi kamu telah berakhir. Silakan login kembali.');
+        }
         const errData = await response.json();
         throw new Error(errData.detail || 'Gagal terhubung dengan asisten.');
       }
@@ -287,9 +321,7 @@ export default function App() {
     }
   };
 
-  const handleSaveApiKey = (key) => {
-    setApiKey(key);
-  };
+
 
   const handleSaveTodaySubmit = (e) => {
     e.preventDefault();
@@ -297,6 +329,10 @@ export default function App() {
     setTodaySessionName('');
     setIsSaveTodayOpen(false);
   };
+
+  if (!token) {
+    return <Login setToken={setToken} />;
+  }
 
   return (
     <div className="app-container">
@@ -383,8 +419,8 @@ export default function App() {
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
-        apiKey={apiKey}
-        onSave={handleSaveApiKey}
+        healthStatus={healthStatus}
+        onLogout={() => setToken('')}
       />
 
       {/* Sidebar Quick-save Dialog Modal */}
