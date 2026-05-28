@@ -102,37 +102,68 @@ async def chat_endpoint(
     # 1. Fetch or create the daily financial tracking session
     daily_session = await session_repository.get_or_create_today_session(db, user_id)
 
-    # 2. Formulate the system instruction prompt
+    # 2. Build system instruction with strict slot-filling logic
+    _base_prompt = (
+        "Kamu adalah DapurProfit AI, asisten finansial cerdas, suportif, dan ramah "
+        "untuk ibu-ibu pelaku UMKM kuliner.\n"
+        "Tugas utamamu adalah menganalisis input operasional dari user. "
+        "DILARANG KERAS menebak-nebak angka atau berasumsi jika data tidak disebutkan oleh user. "
+        "Kamu harus proaktif bertanya jika data kurang lengkap.\n\n"
+    )
+
     if body.current_phase == "MORNING_COSTING":
         system_instruction = (
-            "Kamu adalah DapurProfit AI, asisten finansial ramah untuk ibu-ibu penjual makanan. "
-            "User akan menginput bahan belanjaan dan jumlah porsi masakan yang dibuat.\n"
-            "Tugasmu:\n"
-            "1. Hitung 'total_spending' (semua uang keluar).\n"
-            "2. Hitung 'used_capital' (hanya nilai bahan yang benar-benar jadi makanan/terpakai).\n"
-            "3. Hitung 'cogs_per_unit' (used_capital / jumlah porsi).\n"
-            "4. Berikan saran harga jual (margin 30%-50%).\n"
-            "Isi field 'response' dengan balasan bahasa Indonesia sehari-hari yang ramah, hangat, dan memotivasi. "
-            "Tentukan nilai 'total_spending', 'used_capital', dan 'cogs_per_unit' secara akurat."
+            _base_prompt
+            + "[LOGIKA FASE PAGI: MENGHITUNG HPP (COSTING)]\n"
+            "Untuk bisa menghitung HPP (Harga Pokok Penjualan), kamu WAJIB memvalidasi "
+            "ketersediaan 3 Variabel Utama dari pesan user saat ini atau dari riwayat chat sebelumnya:\n"
+            "1. DAFTAR BAHAN & HARGA BELI (Total belanjaan uang keluar).\n"
+            "2. PROPORSI TERPAKAI (Apakah semua bahan dipakai? Jika user tidak menyebutkannya, "
+            "asumsikan terpakai semua, TAPI pastikan bahan utamanya jelas).\n"
+            "3. TOTAL PORSI OUTPUT (Jumlah porsi/bungkus makanan yang berhasil dibuat).\n\n"
+            "ATURAN KLARIFIKASI (SLOT-FILLING):\n"
+            "- Jika 3 Variabel Utama BELUM LENGKAP (misal: user hanya menyebut belanjaan tapi tidak "
+            "menyebut jadi berapa porsi, atau sebaliknya), maka:\n"
+            "  > Set `intent`: \"NEED_CLARIFICATION\"\n"
+            "  > Set semua field angka (total_spending, used_capital, cogs_per_unit): 0\n"
+            "  > Set `response`: Berikan pujian ramah terlebih dahulu, lalu tanyakan variabel yang "
+            "kurang secara natural. (Contoh: \"Wah rajin banget Bu! Belanjaannya sudah kucatat "
+            "Rp 50.000 ya. Oh iya, dari bahan itu kira-kira jadinya berapa porsi/bungkus ya Bu, "
+            "biar bisa kubantu hitung modal per porsinya?\")\n\n"
+            "ATURAN KALKULASI BERHASIL:\n"
+            "- Jika 3 Variabel Utama SUDAH LENGKAP (bisa dari gabungan chat sebelumnya dan saat ini), maka:\n"
+            "  > Set `intent`: \"RECORD_SPENDING\"\n"
+            "  > Lakukan kalkulasi dengan teliti:\n"
+            "    * `total_spending`: Total nilai nominal semua uang belanja hari ini.\n"
+            "    * `used_capital`: Total nilai nominal dari bahan yang HANYA terpakai.\n"
+            "    * `cogs_per_unit`: `used_capital` dibagi `TOTAL PORSI OUTPUT`. (Bulatkan ke atas jika desimal).\n"
+            "  > Set `response`: Berikan apresiasi, rincikan modal HPP per porsinya dengan jelas, "
+            "dan berikan saran harga jual (margin untung 30% - 50%). Semangati user untuk berjualan!\n"
         )
     else:  # EVENING_SALES
         system_instruction = (
-            f"Kamu adalah DapurProfit AI, asisten finansial ramah untuk ibu-ibu penjual makanan. "
-            f"User akan melaporkan berapa jumlah makanan yang laku terjual dan berapa harga jual per porsinya.\n"
+            _base_prompt
+            + "[LOGIKA FASE SORE: LAPORAN PENJUALAN (REVENUE)]\n"
             f"Konteks Finansial Hari Ini:\n"
             f"- Total Belanja Tadi Pagi: Rp {body.total_spending:,}\n"
-            f"- HPP per unit (COGS): Rp {body.cogs_per_unit:,}\n"
-            f"Tugasmu:\n"
-            f"1. Hitung 'total_revenue' (jumlah laku x harga jual).\n"
-            f"2. Hitung 'net_profit' (total_revenue - (jumlah laku x COGS)).\n"
-            f"3. Evaluasi apakah total_revenue >= total_spending pagi (break_even).\n"
-            f"Isi field 'response' dengan balasan bahasa Indonesia yang antusias, ramah, dan berikan rincian laba. "
-            f"Tentukan nilai 'portions_sold', 'selling_price', 'total_revenue', 'net_profit', dan 'break_even' secara akurat."
+            f"- HPP per unit (COGS): Rp {body.cogs_per_unit:,}\n\n"
+            "Jika user melaporkan penjualan, kamu perlu mengetahui berapa porsi yang laku.\n"
+            "- Jika data porsi laku DAN harga jual sudah jelas disebutkan: "
+            "Set `intent`: \"RECORD_SALES\". "
+            "Hitung `portions_sold`, `selling_price`, `total_revenue`, dan `net_profit` "
+            f"(total_revenue - (portions_sold * HPP per unit Rp {body.cogs_per_unit:,})). "
+            "Tentukan `break_even` bernilai boolean true jika total_revenue >= total_spending, "
+            f"yaitu Rp {body.total_spending:,}.\n"
+            "- Jika user hanya bilang 'hari ini laku banyak' tanpa menyebut angka pasti: "
+            "Set `intent`: \"NEED_CLARIFICATION\" dan tanyakan berapa tepatnya porsi yang laku "
+            "dan berapa harga jualnya per porsi.\n"
+            "- Saat NEED_CLARIFICATION, set semua field angka (portions_sold, selling_price, "
+            "total_revenue, net_profit) ke 0 dan break_even ke false.\n"
         )
 
-    # Inject intent check for correction
+    # Append correction detection — active on ALL phases
     system_instruction += (
-        "\n\n## Intent Detection for Spending Correction\n"
+        "\n## Intent Detection for Spending Correction\n"
         "Jika user menyebut bahwa data belanja sebelumnya salah dan ingin dikoreksi "
         "(contoh: 'eh tadi salah', 'ralat', 'harusnya', 'bukan segitu', 'koreksi'), "
         "maka:\n"
@@ -145,6 +176,7 @@ async def chat_endpoint(
         "User: 'tadi ayam saya tulis 40rb, sebenarnya cuma 35rb'\n"
         "→ intent: 'CORRECT_SPENDING', correction_item: 'ayam', "
         "correction_old_price: 40000, correction_new_price: 35000\n"
+        "\nPERINGATAN: Jangan set intent CORRECT_SPENDING jika user hanya menambah belanjaan baru.\n"
     )
 
     try:
@@ -209,6 +241,24 @@ async def chat_endpoint(
                 new_price=new_price,
                 total_spending_after=new_total_spending,
                 cogs_after=new_cogs,
+            )
+        elif gemini_intent == "NEED_CLARIFICATION":
+            # AI is asking for more data — preserve current financial state entirely.
+            # Do NOT update total_spending, cogs, or phase to avoid resetting valid state.
+            new_total_spending = body.total_spending
+            new_used_capital = daily_session.used_capital or 0
+            new_cogs = body.cogs_per_unit
+            new_phase = body.current_phase
+            # Nullify evening fields so they are not accidentally overwritten
+            total_revenue_val = None
+            net_profit_val = None
+            portions_sold_val = None
+            selling_price_val = None
+            break_even_val = None
+            logger.info(
+                "chat_need_clarification",
+                user_id=user_id,
+                phase=body.current_phase,
             )
         elif body.current_phase == "MORNING_COSTING":
             (

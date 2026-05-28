@@ -24,9 +24,14 @@ GEMINI_RESPONSE_SCHEMA = types.Schema(
                 "CORRECT_SPENDING",
                 "RECORD_SALES",
                 "ASK_INFO",
+                "NEED_CLARIFICATION",
                 "OTHER",
             ],
-            description="The classified main intent of the user's message.",
+            description=(
+                "The classified main intent of the user's message. "
+                "Use NEED_CLARIFICATION when required data slots are missing "
+                "and AI must ask a follow-up question before calculating."
+            ),
         ),
         "correction_item": types.Schema(
             type=types.Type.STRING,

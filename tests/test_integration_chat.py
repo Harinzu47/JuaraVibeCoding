@@ -102,3 +102,46 @@ async def test_chat_authorized_correct_spending(
     assert data["is_correction"] is True
     assert data["total_spending"] == 90000
     assert data["correction_summary"] is not None
+
+
+@pytest.mark.asyncio
+@patch("app.api.v1.chat.gemini_service")
+async def test_chat_need_clarification(
+    mock_gemini_service, async_client: AsyncClient
+):
+    # Setup mock service response
+    mock_gemini_service.generate_content = AsyncMock(
+        return_value={
+            "response": "Berapa porsinya, Bu?",
+            "intent": "NEED_CLARIFICATION",
+            "total_spending": 0,
+            "used_capital": 0,
+            "cogs_per_unit": 0,
+        }
+    )
+
+    # Log in to get token
+    login_res = await async_client.post(
+        "/api/auth/login",
+        json={"email": "test@dapurprofit.com", "password": "password123"},
+    )
+    token = login_res.json()["access_token"]
+
+    response = await async_client.post(
+        "/api/chat/",
+        json={
+            "message": "beli ayam 50rb",
+            "chat_history": [],
+            "current_phase": "MORNING_COSTING",
+            "total_spending": 0,
+            "cogs_per_unit": 0,
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["current_phase"] == "MORNING_COSTING"
+    assert data["cogs_per_unit"] == 0
+    assert data["total_spending"] == 0
+    assert data["response"] == "Berapa porsinya, Bu?"
