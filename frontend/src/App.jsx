@@ -259,6 +259,7 @@ export default function App() {
         month: 'long', 
         day: 'numeric' 
       }),
+      rawDate: new Date().toISOString().split('T')[0],
       itemName: itemName || "Dagangan Hari Ini",
       totalSpending: totalSpending,
       usedCapital: usedCapital,
@@ -303,6 +304,14 @@ export default function App() {
   // Manual Transaction Add Handler
   const handleAddManualTransaction = (record) => {
     const updatedHistory = [...historyList, record];
+    setHistoryList(updatedHistory);
+  };
+
+  // Update single history log
+  const handleUpdateHistoryItem = (updatedRecord) => {
+    const updatedHistory = historyList.map(item => 
+      item.id === updatedRecord.id ? updatedRecord : item
+    );
     setHistoryList(updatedHistory);
   };
 
@@ -366,6 +375,7 @@ export default function App() {
           onDeleteHistoryItem={handleDeleteHistoryItem}
           onClearHistory={handleClearHistory}
           onAddManualTransaction={handleAddManualTransaction}
+          onUpdateHistoryItem={handleUpdateHistoryItem}
           onSaveTodaySession={handleSaveSession}
           todayData={{
             totalSpending,

@@ -306,5 +306,5 @@ async def chat_endpoint(
 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred while communicating with the assistant.",
+            detail=f"An unexpected error occurred while communicating with the assistant: {str(e)}",
         )

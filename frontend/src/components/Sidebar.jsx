@@ -33,7 +33,7 @@ export default function Sidebar({
       )}
 
       {/* Sidebar Aside Panel */}
-      <aside className={`sidebar-panel ${isOpenMobile ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`sidebar-panel${isOpenMobile ? ' sidebar-open' : ''}`}>
         {/* Sidebar Header */}
         <div className="sidebar-header">
           <div className="flex items-center gap-sm">

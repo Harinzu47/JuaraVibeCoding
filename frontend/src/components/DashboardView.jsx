@@ -9,7 +9,8 @@ import {
   Package, 
   CheckCircle, 
   XCircle, 
-  AlertCircle
+  AlertCircle,
+  Edit
 } from 'lucide-react';
 
 export default function DashboardView({
@@ -17,6 +18,7 @@ export default function DashboardView({
   onDeleteHistoryItem,
   onClearHistory,
   onAddManualTransaction,
+  onUpdateHistoryItem,
   onSaveTodaySession,
   todayData = {},
   currentPhase
@@ -24,6 +26,7 @@ export default function DashboardView({
   // Local state for Modals
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const [isSaveTodayModalOpen, setIsSaveTodayModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   
   // Fields for manual entry
   const [manualName, setManualName] = useState('');
@@ -33,6 +36,16 @@ export default function DashboardView({
   const [manualCogsPerUnit, setManualCogsPerUnit] = useState('');
   const [manualPortionsSold, setManualPortionsSold] = useState('');
   const [manualSellingPrice, setManualSellingPrice] = useState('');
+
+  // Fields for editing
+  const [editingId, setEditingId] = useState(null);
+  const [editName, setEditName] = useState('');
+  const [editDate, setEditDate] = useState('');
+  const [editTotalSpending, setEditTotalSpending] = useState('');
+  const [editUsedCapital, setEditUsedCapital] = useState('');
+  const [editCogsPerUnit, setEditCogsPerUnit] = useState('');
+  const [editPortionsSold, setEditPortionsSold] = useState('');
+  const [editSellingPrice, setEditSellingPrice] = useState('');
 
   // Field for naming today's session
   const [todaySessionName, setTodaySessionName] = useState('');
@@ -106,6 +119,7 @@ export default function DashboardView({
         month: 'long', 
         day: 'numeric' 
       }),
+      rawDate: manualDate,
       itemName: manualName,
       totalSpending: spent,
       usedCapital: used,
@@ -127,6 +141,86 @@ export default function DashboardView({
     setManualPortionsSold('');
     setManualSellingPrice('');
     setIsManualModalOpen(false);
+  };
+
+  // Helper to parse Indonesian date "Kamis, 28 Mei 2026" to "2026-05-28" for date input prefill
+  const getIsoDate = (item) => {
+    if (item.rawDate) return item.rawDate;
+    try {
+      const clean = item.date.replace(/(?:Hari|Senin|Selasa|Rabu|Kamis|Jumat|Sabtu|Minggu),?\s*/g, '').trim();
+      const parts = clean.split(' ');
+      if (parts.length === 3) {
+        const day = parts[0].padStart(2, '0');
+        const months = {
+          januari: '01', februari: '02', maret: '03', april: '04', mei: '05', juni: '06',
+          juli: '07', agustus: '08', september: '09', oktober: '10', november: '11', desember: '12'
+        };
+        const monthStr = months[parts[1].toLowerCase()];
+        const year = parts[2];
+        if (monthStr && year) {
+          return `${year}-${monthStr}-${day}`;
+        }
+      }
+    } catch (e) {
+      console.error("Failed to parse date:", e);
+    }
+    return new Date().toISOString().split('T')[0];
+  };
+
+  // Open Edit Modal
+  const handleOpenEditModal = (item) => {
+    setEditingId(item.id);
+    setEditName(item.itemName);
+    setEditDate(getIsoDate(item));
+    setEditTotalSpending(item.totalSpending.toString());
+    setEditUsedCapital(item.usedCapital.toString());
+    setEditCogsPerUnit(item.cogsPerUnit.toString());
+    setEditPortionsSold(item.portionsSold.toString());
+    setEditSellingPrice(item.sellingPrice.toString());
+    setIsEditModalOpen(true);
+  };
+
+  // Submit Edit Form
+  const handleEditSubmit = (e) => {
+    e.preventDefault();
+    if (!editName.trim()) {
+      alert("Nama Menu jualan tidak boleh kosong ya, Bu.");
+      return;
+    }
+
+    const spent = parseInt(editTotalSpending) || 0;
+    const used = parseInt(editUsedCapital) || 0;
+    const cogs = parseInt(editCogsPerUnit) || 0;
+    const sold = parseInt(editPortionsSold) || 0;
+    const price = parseInt(editSellingPrice) || 0;
+    
+    const revenue = sold * price;
+    const profit = revenue - (sold * cogs);
+
+    const formattedDate = new Date(editDate).toLocaleDateString('id-ID', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+
+    const updatedRecord = {
+      id: editingId,
+      date: formattedDate,
+      rawDate: editDate,
+      itemName: editName,
+      totalSpending: spent,
+      usedCapital: used,
+      cogsPerUnit: cogs,
+      portionsSold: sold,
+      sellingPrice: price,
+      totalRevenue: revenue,
+      netProfit: profit,
+      breakEven: revenue >= spent
+    };
+
+    onUpdateHistoryItem(updatedRecord);
+    setIsEditModalOpen(false);
   };
 
   // 4. SUBMIT TODAY'S SESSION SAVE
@@ -175,7 +269,7 @@ export default function DashboardView({
         <div className="kpi-card">
           <div className="kpi-icon profit"><TrendingUp size={24} /></div>
           <div className="kpi-details">
-            <h3>Total Laba Bersih</h3>
+            <h3>Total Keuntungan (Laba)</h3>
             <p className="kpi-value text-teal">{formatRp(totalProfit)}</p>
             <span className="kpi-sub">Dari total jualan laku</span>
           </div>
@@ -183,7 +277,7 @@ export default function DashboardView({
         <div className="kpi-card">
           <div className="kpi-icon revenue"><DollarSign size={24} /></div>
           <div className="kpi-details">
-            <h3>Total Omzet</h3>
+            <h3>Total Pemasukan (Omzet)</h3>
             <p className="kpi-value text-primary">{formatRp(totalRevenue)}</p>
             <span className="kpi-sub">Total seluruh pemasukan</span>
           </div>
@@ -279,42 +373,53 @@ export default function DashboardView({
                   <tr>
                     <th>Menu</th>
                     <th>Tanggal</th>
-                    <th>Modal Belanja</th>
+                    <th>Belanja</th>
+                    <th>HPP/Porsi</th>
                     <th>Omzet</th>
-                    <th>Laba Bersih</th>
-                    <th>Status BEP</th>
+                    <th>Laba</th>
+                    <th>Status</th>
                     <th>Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
                   {[...historyList].reverse().map(item => (
                     <tr key={item.id}>
-                      <td className="font-bold">{item.itemName}</td>
-                      <td className="text-muted text-sm">{item.date.replace(/Hari|Senin|Selasa|Rabu|Kamis|Jumat|Sabtu|Minggu,?\s*/g, '')}</td>
-                      <td>{formatRp(item.totalSpending)}</td>
-                      <td>{formatRp(item.totalRevenue)}</td>
-                      <td className={item.netProfit >= 0 ? "text-teal font-bold" : "text-red-600 font-bold"}>
+                      <td className="col-menu font-bold" data-label="Menu">{item.itemName}</td>
+                      <td data-label="Tanggal" className="text-muted text-sm">{item.date.replace(/(?:Hari|Senin|Selasa|Rabu|Kamis|Jumat|Sabtu|Minggu),?\s*/g, '')}</td>
+                      <td data-label="Belanja">{formatRp(item.totalSpending)}</td>
+                      <td data-label="HPP/Porsi">{formatRp(item.cogsPerUnit)}</td>
+                      <td data-label="Omzet">{formatRp(item.totalRevenue)}</td>
+                      <td data-label="Laba" className={item.netProfit >= 0 ? "text-teal font-bold" : "text-red-600 font-bold"}>
                         {formatRp(item.netProfit)}
                       </td>
-                      <td>
+                      <td data-label="Status">
                         {item.breakEven ? (
                            <span className="badge badge-success flex items-center gap-xs">
                              <CheckCircle size={12} /> Balik Modal
                            </span>
                         ) : (
                            <span className="badge badge-warning flex items-center gap-xs">
-                             <XCircle size={12} /> Belum BEP
+                             <XCircle size={12} /> Belum BM
                            </span>
                         )}
                       </td>
-                      <td>
-                        <button 
-                          className="icon-btn text-muted hover-red"
-                          onClick={() => onDeleteHistoryItem(item.id)}
-                          title="Hapus Catatan"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                      <td className="col-aksi">
+                        <div className="flex gap-xs justify-center">
+                          <button 
+                            className="icon-btn text-muted hover-blue"
+                            onClick={() => handleOpenEditModal(item)}
+                            title="Ubah Catatan"
+                          >
+                            <Edit size={16} />
+                          </button>
+                          <button 
+                            className="icon-btn text-muted hover-red"
+                            onClick={() => onDeleteHistoryItem(item.id)}
+                            title="Hapus Catatan"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -398,6 +503,9 @@ export default function DashboardView({
                       onChange={e => setManualTotalSpending(e.target.value)} 
                       placeholder="60000"
                     />
+                    <p className="helper-text" style={{ marginTop: '4px', fontSize: '11px', opacity: 0.8 }}>
+                      Semua uang yang keluar untuk belanja bahan hari ini.
+                    </p>
                   </div>
                   <div>
                     <label>Modal Kepake (Rp)</label>
@@ -408,6 +516,9 @@ export default function DashboardView({
                       onChange={e => setManualUsedCapital(e.target.value)} 
                       placeholder="40000"
                     />
+                    <p className="helper-text" style={{ marginTop: '4px', fontSize: '11px', opacity: 0.8 }}>
+                      Nilai bahan yang benar-benar dimasak hari ini (tidak termasuk sisa/stok).
+                    </p>
                   </div>
                 </div>
                 <div className="flex-row-form">
@@ -420,6 +531,9 @@ export default function DashboardView({
                       onChange={e => setManualCogsPerUnit(e.target.value)} 
                       placeholder="2000"
                     />
+                    <p className="helper-text" style={{ marginTop: '4px', fontSize: '11px', opacity: 0.8 }}>
+                      Modal per porsi makanan (bisa dihitung dari: Modal Kepake ÷ Jumlah Porsi).
+                    </p>
                   </div>
                 </div>
                 <div className="flex-row-form">
@@ -451,6 +565,115 @@ export default function DashboardView({
               <footer className="modal-footer">
                 <button type="button" className="btn btn-outline" onClick={() => setIsManualModalOpen(false)}>Batal</button>
                 <button type="submit" className="btn btn-primary">Tambahkan</button>
+              </footer>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: MANUAL TRANSACTION EDIT */}
+      {isEditModalOpen && (
+        <div className="modal-backdrop">
+          <div className="modal-card max-w-md">
+            <header className="modal-header">
+              <h3>📝 Ubah Transaksi</h3>
+              <button className="close-btn" onClick={() => setIsEditModalOpen(false)}>&times;</button>
+            </header>
+            <form onSubmit={handleEditSubmit}>
+              <div className="modal-body grid-form">
+                <div>
+                  <label>Nama Menu Dagangan</label>
+                  <input 
+                    type="text" 
+                    className="form-input" 
+                    value={editName} 
+                    onChange={e => setEditName(e.target.value)} 
+                    placeholder="Misal: Donat Kentang"
+                    required 
+                  />
+                </div>
+                <div>
+                  <label>Tanggal Catatan</label>
+                  <input 
+                    type="date" 
+                    className="form-input" 
+                    value={editDate} 
+                    onChange={e => setEditDate(e.target.value)} 
+                    required 
+                  />
+                </div>
+                <div className="flex-row-form">
+                  <div>
+                    <label>Total Belanja (Rp)</label>
+                    <input 
+                      type="number" 
+                      className="form-input" 
+                      value={editTotalSpending} 
+                      onChange={e => setEditTotalSpending(e.target.value)} 
+                      placeholder="60000"
+                    />
+                    <p className="helper-text" style={{ marginTop: '4px', fontSize: '11px', opacity: 0.8 }}>
+                      Semua uang yang keluar untuk belanja bahan hari ini.
+                    </p>
+                  </div>
+                  <div>
+                    <label>Modal Kepake (Rp)</label>
+                    <input 
+                      type="number" 
+                      className="form-input" 
+                      value={editUsedCapital} 
+                      onChange={e => setEditUsedCapital(e.target.value)} 
+                      placeholder="40000"
+                    />
+                    <p className="helper-text" style={{ marginTop: '4px', fontSize: '11px', opacity: 0.8 }}>
+                      Nilai bahan yang benar-benar dimasak hari ini (tidak termasuk sisa/stok).
+                    </p>
+                  </div>
+                </div>
+                <div className="flex-row-form">
+                  <div>
+                    <label>HPP per Porsi (Rp)</label>
+                    <input 
+                      type="number" 
+                      className="form-input" 
+                      value={editCogsPerUnit} 
+                      onChange={e => setEditCogsPerUnit(e.target.value)} 
+                      placeholder="2000"
+                    />
+                    <p className="helper-text" style={{ marginTop: '4px', fontSize: '11px', opacity: 0.8 }}>
+                      Modal per porsi makanan (bisa dihitung dari: Modal Kepake ÷ Jumlah Porsi).
+                    </p>
+                  </div>
+                </div>
+                <div className="flex-row-form">
+                  <div>
+                    <label>Porsi Terjual</label>
+                    <input 
+                      type="number" 
+                      className="form-input" 
+                      value={editPortionsSold} 
+                      onChange={e => setEditPortionsSold(e.target.value)} 
+                      placeholder="18"
+                    />
+                  </div>
+                  <div>
+                    <label>Harga Jual (Rp)</label>
+                    <input 
+                      type="number" 
+                      className="form-input" 
+                      value={editSellingPrice} 
+                      onChange={e => setEditSellingPrice(e.target.value)} 
+                      placeholder="5000"
+                    />
+                  </div>
+                </div>
+                <p className="helper-text text-sm">
+                  Omzet dan Laba Bersih akan dihitung secara otomatis berdasarkan porsi terjual, harga jual, dan HPP.
+                </p>
+              </div>
+              <footer className="modal-footer">
+                <button type="button" className="btn btn-outline" onClick={() => setIsEditModalOpen(false)}>Batal</button>
+                <button type="submit" className="btn btn-primary">Simpan Perubahan</button>
               </footer>
             </form>
           </div>
