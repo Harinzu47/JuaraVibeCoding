@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ChefHat } from 'lucide-react';
 
-export default function Register({ setToken, onToggleView }) {
+export default function Register({ setToken, onToggleView, onSuccess }) {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -44,8 +44,14 @@ export default function Register({ setToken, onToggleView }) {
         throw new Error(data.detail || 'Registrasi gagal');
       }
 
-      // UX: Registrasi sukses, tampilkan alert lalu set token (Auto Login)
-      alert('Registrasi Berhasil! Selamat datang di AturModal.');
+      // UX: Registrasi sukses, tampilkan toast lalu set token (Auto Login)
+      if (onSuccess) onSuccess('Registrasi Berhasil! Selamat datang di AturModal.');
+      if (data.full_name) {
+        localStorage.setItem('dp_full_name', data.full_name);
+      } else {
+        localStorage.removeItem('dp_full_name');
+      }
+      localStorage.setItem('dp_email', data.email || '');
       setToken(data.access_token);
       
     } catch (err) {

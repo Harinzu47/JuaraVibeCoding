@@ -1,5 +1,15 @@
 # =======================================================================
-# Stage 1: builder — install semua Python dependencies
+# Stage 1: Build Frontend React App
+# =======================================================================
+FROM node:20-slim AS frontend-builder
+WORKDIR /frontend
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
+# =======================================================================
+# Stage 2: builder — install semua Python dependencies
 # =======================================================================
 FROM python:3.11-slim AS builder
 
@@ -22,7 +32,7 @@ RUN pip install --upgrade pip && \
 
 
 # =======================================================================
-# Stage 2: runtime — image final yang ringan
+# Stage 3: runtime — image final yang ringan
 # =======================================================================
 FROM python:3.11-slim AS runtime
 
@@ -42,6 +52,9 @@ COPY --from=builder /install /usr/local
 # Copy source code (hormat .dockerignore — .env tidak masuk)
 COPY . .
 
+# Copy compiled frontend dari stage frontend-builder
+COPY --from=frontend-builder /frontend/dist ./frontend/dist
+
 # Cloud Run inject PORT via env var — default 8080
 ENV PORT=8080
 ENV PYTHONUNBUFFERED=1
@@ -57,3 +70,4 @@ CMD alembic upgrade head && \
     --loop uvloop \
     --http httptools \
     --no-access-log
+

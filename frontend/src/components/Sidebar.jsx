@@ -7,7 +7,8 @@ import {
   Sunset, 
   TrendingUp, 
   MessageSquare,
-  Save
+  Save,
+  LogOut
 } from 'lucide-react';
 import MetricCard from './MetricCard';
 
@@ -23,8 +24,19 @@ export default function Sidebar({
   onOpenSettings,
   isOpenMobile,
   toggleMobileSidebar,
-  onOpenSaveTodayModal
+  onOpenSaveTodayModal,
+  currentUser,
+  onLogout,
 }) {
+  // Generate initials from name or email
+  const getInitials = () => {
+    if (currentUser?.fullName) {
+      return currentUser.fullName.trim().split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+    }
+    if (currentUser?.email) return currentUser.email[0].toUpperCase();
+    return '?';
+  };
+
   return (
     <>
       {/* Mobile Overlay */}
@@ -68,7 +80,7 @@ export default function Sidebar({
                 className={`phase-toggle-btn ${currentPhase === 'EVENING_SALES' ? 'active' : ''}`}
                 onClick={() => {
                   if (cogsPerUnit <= 0) {
-                    alert("Hitung modal belanja pagi dan HPP dulu ya Bu di obrolan!");
+                    alert("Hitung modal belanja pagi dan HPP dulu ya di obrolan!");
                     return;
                   }
                   onChangePhase('EVENING_SALES');
@@ -137,7 +149,29 @@ export default function Sidebar({
             Pengaturan
           </div>
         </nav>
+
+        {/* ── User Identity Card ── */}
+        {currentUser && (
+          <div className="user-card">
+            <div className="user-card-avatar">{getInitials()}</div>
+            <div className="user-card-info">
+              <span className="user-card-name">
+                {currentUser.fullName || 'Pengguna'}
+              </span>
+              <span className="user-card-email">{currentUser.email}</span>
+            </div>
+            <button
+              className="user-card-logout"
+              onClick={onLogout}
+              title="Logout"
+            >
+              <LogOut size={15} />
+            </button>
+          </div>
+        )}
       </aside>
     </>
   );
 }
+
+

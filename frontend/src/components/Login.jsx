@@ -25,6 +25,12 @@ export default function Login({ setToken, onToggleView }) {
         throw new Error(data.detail || 'Login gagal');
       }
 
+      if (data.full_name) {
+        localStorage.setItem('dp_full_name', data.full_name);
+      } else {
+        localStorage.removeItem('dp_full_name');
+      }
+      localStorage.setItem('dp_email', data.email || '');
       setToken(data.access_token);
     } catch (err) {
       setErrorMsg(err.message);

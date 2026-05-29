@@ -24,3 +24,4 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     user_id: str
     email: str
+    full_name: str | None = None

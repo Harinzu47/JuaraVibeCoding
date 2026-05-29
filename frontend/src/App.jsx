@@ -6,52 +6,46 @@ import DashboardView from './components/DashboardView';
 import SettingsModal from './components/SettingsModal';
 import Login from './components/Login';
 import Register from './components/Register';
+import Toast from './components/Toast';
 
 export default function App() {
   // =====================================================================
-  // 1. STATE INITIALIZATION (Local Storage Persistent)
+  // 0. ONE-TIME MIGRATION: Evict stale financial data from localStorage
+  //    (These keys are no longer written — server is now Single Source of Truth)
   // =====================================================================
-  const [chatHistory, setChatHistory] = useState(() => {
-    return JSON.parse(localStorage.getItem('dp_chat_history')) || [];
-  });
-  const [totalSpending, setTotalSpending] = useState(() => {
-    return parseInt(localStorage.getItem('dp_total_spending')) || 0;
-  });
-  const [usedCapital, setUsedCapital] = useState(() => {
-    return parseInt(localStorage.getItem('dp_used_capital')) || 0;
-  });
-  const [cogsPerUnit, setCogsPerUnit] = useState(() => {
-    return parseInt(localStorage.getItem('dp_cogs_per_unit')) || 0;
-  });
-  const [currentPhase, setCurrentPhase] = useState(() => {
-    return localStorage.getItem('dp_current_phase') || 'MORNING_COSTING';
-  });
+  (() => {
+    const staleKeys = [
+      'dp_chat_history', 'dp_total_spending', 'dp_used_capital',
+      'dp_cogs_per_unit', 'dp_current_phase', 'dp_today_revenue',
+      'dp_today_profit', 'dp_today_sold_qty', 'dp_today_price_per_unit',
+      'dp_today_breakeven', 'dp_history'
+    ];
+    staleKeys.forEach(k => localStorage.removeItem(k));
+  })();
+
+  // =====================================================================
+  // 1. STATE INITIALIZATION — always start clean, filled from server
+  // =====================================================================
+
+  const [chatHistory, setChatHistory] = useState([]);
+  const [totalSpending, setTotalSpending] = useState(0);
+  const [usedCapital, setUsedCapital] = useState(0);
+  const [cogsPerUnit, setCogsPerUnit] = useState(0);
+  const [currentPhase, setCurrentPhase] = useState('MORNING_COSTING');
   const [healthStatus, setHealthStatus] = useState({
     gemini_configured: false,
     redis_connected: false
   });
 
   // Additional states for evening sales
-  const [todayRevenue, setTodayRevenue] = useState(() => {
-    return parseInt(localStorage.getItem('dp_today_revenue')) || 0;
-  });
-  const [todayProfit, setTodayProfit] = useState(() => {
-    return parseInt(localStorage.getItem('dp_today_profit')) || 0;
-  });
-  const [todaySoldQty, setTodaySoldQty] = useState(() => {
-    return parseInt(localStorage.getItem('dp_today_sold_qty')) || 0;
-  });
-  const [todayPricePerUnit, setTodayPricePerUnit] = useState(() => {
-    return parseInt(localStorage.getItem('dp_today_price_per_unit')) || 0;
-  });
-  const [todayBreakeven, setTodayBreakeven] = useState(() => {
-    return localStorage.getItem('dp_today_breakeven') === 'true';
-  });
+  const [todayRevenue, setTodayRevenue] = useState(0);
+  const [todayProfit, setTodayProfit] = useState(0);
+  const [todaySoldQty, setTodaySoldQty] = useState(0);
+  const [todayPricePerUnit, setTodayPricePerUnit] = useState(0);
+  const [todayBreakeven, setTodayBreakeven] = useState(false);
 
-  // Saved History List state
-  const [historyList, setHistoryList] = useState(() => {
-    return JSON.parse(localStorage.getItem('dp_history')) || [];
-  });
+  // Saved History List state — always starts empty, filled from server
+  const [historyList, setHistoryList] = useState([]);
 
   // UI Toggles
   const [activeTab, setActiveTab] = useState('chat');
@@ -71,31 +65,29 @@ export default function App() {
     return localStorage.getItem('dp_token') || '';
   });
 
+  // Current user info (from localStorage, set at login/register)
+  const [currentUser, setCurrentUser] = useState(() => ({
+    fullName: localStorage.getItem('dp_full_name') || '',
+    email: localStorage.getItem('dp_email') || '',
+  }));
+
   // Auth View State (login | register)
   const [authView, setAuthView] = useState('login');
+
+  // Global Toast State
+  const [globalToast, setGlobalToast] = useState(null);
 
   // =====================================================================
   // 2. STATE SAVE EFFECT
   // =====================================================================
+  // Token is the ONLY thing persisted in localStorage
   useEffect(() => {
-    localStorage.setItem('dp_chat_history', JSON.stringify(chatHistory));
-  }, [chatHistory]);
-
-  useEffect(() => {
-    localStorage.setItem('dp_total_spending', totalSpending.toString());
-  }, [totalSpending]);
-
-  useEffect(() => {
-    localStorage.setItem('dp_used_capital', usedCapital.toString());
-  }, [usedCapital]);
-
-  useEffect(() => {
-    localStorage.setItem('dp_cogs_per_unit', cogsPerUnit.toString());
-  }, [cogsPerUnit]);
-
-  useEffect(() => {
-    localStorage.setItem('dp_current_phase', currentPhase);
-  }, [currentPhase]);
+    if (token) {
+      localStorage.setItem('dp_token', token);
+    } else {
+      localStorage.removeItem('dp_token');
+    }
+  }, [token]);
 
   const fetchHealthStatus = async () => {
     try {
@@ -116,6 +108,7 @@ export default function App() {
     if (token) {
       fetchHealthStatus();
       fetchTodaySession();
+      fetchHistoryList();
     }
   }, [isSettingsOpen, token]);
 
@@ -128,23 +121,25 @@ export default function App() {
         const data = await response.json();
         setCurrentSessionId(data.id);
         
-        // Sync local state from Single Source of Truth
-        if (data.total_spending > 0) setTotalSpending(data.total_spending);
-        if (data.used_capital > 0) setUsedCapital(data.used_capital);
-        if (data.cogs_per_unit > 0) setCogsPerUnit(data.cogs_per_unit);
-        if (data.current_phase) setCurrentPhase(data.current_phase);
-        
-        if (data.total_revenue !== null) setTodayRevenue(data.total_revenue);
-        if (data.net_profit !== null) setTodayProfit(data.net_profit);
-        if (data.portions_sold !== null) setTodaySoldQty(data.portions_sold);
-        if (data.selling_price !== null) setTodayPricePerUnit(data.selling_price);
-        if (data.break_even !== null) setTodayBreakeven(data.break_even);
+        // Always overwrite state from server (Single Source of Truth)
+        setTotalSpending(data.total_spending || 0);
+        setUsedCapital(data.used_capital || 0);
+        setCogsPerUnit(data.cogs_per_unit || 0);
+        setCurrentPhase(data.current_phase || 'MORNING_COSTING');
+        setTodayRevenue(data.total_revenue || 0);
+        setTodayProfit(data.net_profit || 0);
+        setTodaySoldQty(data.portions_sold || 0);
+        setTodayPricePerUnit(data.selling_price || 0);
+        setTodayBreakeven(data.break_even || false);
 
         if (data.messages && data.messages.length > 0) {
-          // Initialize chat history from DB
+          // Always set chat history from DB
           setChatHistory(data.messages.map(m => ({ role: m.role, content: m.content })));
-        } else if (chatHistory.length === 0) {
-           setChatHistory([{ role: 'assistant', content: 'Halo Ibu! Yuk catat belanja modal dan pemasukan hari ini, biar AturModal yang hitung semuanya otomatis. Sudah belanja apa saja pagi ini Bu?' }]);
+        } else {
+          // Fresh session — generate personalized greeting
+          const userName = localStorage.getItem('dp_full_name');
+          const sapaan = userName ? userName : "Kak/Ibu";
+          setChatHistory([{ role: 'assistant', content: `Halo ${sapaan}! Yuk catat belanja modal dan pemasukan hari ini, biar AturModal yang hitung semuanya otomatis. Sudah belanja apa saja pagi ini ${sapaan}?` }]);
         }
       }
     } catch (err) {
@@ -152,37 +147,41 @@ export default function App() {
     }
   };
 
-  useEffect(() => {
-    localStorage.setItem('dp_today_revenue', todayRevenue.toString());
-  }, [todayRevenue]);
-
-  useEffect(() => {
-    localStorage.setItem('dp_today_profit', todayProfit.toString());
-  }, [todayProfit]);
-
-  useEffect(() => {
-    localStorage.setItem('dp_today_sold_qty', todaySoldQty.toString());
-  }, [todaySoldQty]);
-
-  useEffect(() => {
-    localStorage.setItem('dp_today_price_per_unit', todayPricePerUnit.toString());
-  }, [todayPricePerUnit]);
-
-  useEffect(() => {
-    localStorage.setItem('dp_today_breakeven', todayBreakeven.toString());
-  }, [todayBreakeven]);
-
-  useEffect(() => {
-    localStorage.setItem('dp_history', JSON.stringify(historyList));
-  }, [historyList]);
-
-  useEffect(() => {
-    if (token) {
-      localStorage.setItem('dp_token', token);
-    } else {
-      localStorage.removeItem('dp_token');
+  const fetchHistoryList = async () => {
+    try {
+      const response = await fetch('/api/sessions/', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const todayStr = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
+        const mappedHistory = data
+          .filter(session => session.session_date !== todayStr) // exclude today's active session
+          .map(session => {
+          const dateObj = new Date(session.session_date);
+          return {
+            id: session.id,
+            date: dateObj.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+            rawDate: session.session_date,
+            itemName: "Catatan Harian",
+            totalSpending: session.total_spending,
+            usedCapital: session.used_capital,
+            cogsPerUnit: session.cogs_per_unit,
+            portionsSold: session.portions_sold || 0,
+            sellingPrice: session.selling_price || 0,
+            totalRevenue: session.total_revenue || 0,
+            netProfit: session.net_profit || 0,
+            breakEven: session.break_even || false
+          };
+        });
+        setHistoryList(mappedHistory);
+      }
+    } catch (err) {
+      console.error("Failed to load history list:", err);
     }
-  }, [token]);
+  };
+
+
 
   // =====================================================================
   // 3. API CLIENT CALLS & ACTIONS
@@ -364,7 +363,7 @@ export default function App() {
 
   // Reset Today's Session
   const handleReset = () => {
-    if (confirm('Apakah Ibu yakin ingin menghapus seluruh riwayat modal dan obrolan hari ini?')) {
+    if (confirm('Apakah Anda yakin ingin menghapus seluruh riwayat modal dan obrolan hari ini?')) {
       setChatHistory([]);
       setTotalSpending(0);
       setUsedCapital(0);
@@ -375,18 +374,11 @@ export default function App() {
       setTodaySoldQty(0);
       setTodayPricePerUnit(0);
       setTodayBreakeven(false);
-      
-      // Clean local storage
-      localStorage.removeItem('dp_chat_history');
-      localStorage.removeItem('dp_total_spending');
-      localStorage.removeItem('dp_used_capital');
-      localStorage.removeItem('dp_cogs_per_unit');
-      localStorage.removeItem('dp_current_phase');
-      localStorage.removeItem('dp_today_revenue');
-      localStorage.removeItem('dp_today_profit');
-      localStorage.removeItem('dp_today_sold_qty');
-      localStorage.removeItem('dp_today_price_per_unit');
-      localStorage.removeItem('dp_today_breakeven');
+      // Also reset on server
+      fetch('/api/sessions/today', {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      }).catch(err => console.error('Failed to reset session on server:', err));
     }
   };
 
@@ -417,6 +409,8 @@ export default function App() {
 
     const updatedHistory = [...historyList, newRecord];
     setHistoryList(updatedHistory);
+    // Refresh from server to stay in sync
+    fetchHistoryList();
 
     // Reset today's inputs
     setChatHistory([]);
@@ -430,19 +424,7 @@ export default function App() {
     setTodayPricePerUnit(0);
     setTodayBreakeven(false);
 
-    // Remove chat logs from localStorage
-    localStorage.removeItem('dp_chat_history');
-    localStorage.removeItem('dp_total_spending');
-    localStorage.removeItem('dp_used_capital');
-    localStorage.removeItem('dp_cogs_per_unit');
-    localStorage.removeItem('dp_current_phase');
-    localStorage.removeItem('dp_today_revenue');
-    localStorage.removeItem('dp_today_profit');
-    localStorage.removeItem('dp_today_sold_qty');
-    localStorage.removeItem('dp_today_price_per_unit');
-    localStorage.removeItem('dp_today_breakeven');
-
-    alert("Laporan penjualan hari ini berhasil disimpan ke Riwayat!");
+    setGlobalToast("Laporan penjualan hari ini berhasil disimpan ke Riwayat!");
   };
 
   // Manual Transaction Add Handler
@@ -469,9 +451,8 @@ export default function App() {
 
   // Clear all saved history logs
   const handleClearHistory = () => {
-    if (confirm("Apakah Ibu yakin ingin menghapus seluruh riwayat penjualan? Tindakan ini tidak dapat dibatalkan!")) {
+    if (confirm("Apakah Anda yakin ingin menghapus seluruh riwayat penjualan? Tindakan ini tidak dapat dibatalkan!")) {
       setHistoryList([]);
-      localStorage.removeItem('dp_history');
     }
   };
 
@@ -482,16 +463,34 @@ export default function App() {
     setIsSaveTodayOpen(false);
   };
 
+  // Secure Logout (Hard Reset)
+  const handleLogout = () => {
+    // Only 3 things are in localStorage now: token, full_name, email
+    localStorage.removeItem('dp_token');
+    localStorage.removeItem('dp_full_name');
+    localStorage.removeItem('dp_email');
+    
+    // Hard navigate to trigger fresh React mount and dump all in-memory state
+    window.location.href = '/';
+  };
+
   if (!token) {
-    if (authView === 'login') {
-      return <Login setToken={setToken} onToggleView={() => setAuthView('register')} />;
-    } else {
-      return <Register setToken={setToken} onToggleView={() => setAuthView('login')} />;
-    }
+    return (
+      <>
+        <Toast message={globalToast} onClose={() => setGlobalToast(null)} />
+        {authView === 'login' ? (
+          <Login setToken={setToken} onToggleView={() => setAuthView('register')} />
+        ) : (
+          <Register setToken={setToken} onToggleView={() => setAuthView('login')} onSuccess={setGlobalToast} />
+        )}
+      </>
+    );
   }
 
   return (
-    <div className="app-container">
+    <>
+      <Toast message={globalToast} onClose={() => setGlobalToast(null)} />
+      <div className="app-container">
       {/* Sidebar Component */}
       <Sidebar
         totalSpending={totalSpending}
@@ -506,6 +505,8 @@ export default function App() {
         isOpenMobile={isMobileSidebarOpen}
         toggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
         onOpenSaveTodayModal={() => setIsSaveTodayOpen(true)}
+        currentUser={currentUser}
+        onLogout={handleLogout}
       />
 
       {/* Main Content Area */}
@@ -577,7 +578,7 @@ export default function App() {
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         healthStatus={healthStatus}
-        onLogout={() => setToken('')}
+        onLogout={handleLogout}
       />
 
       {/* Quick Save Modal */}
@@ -612,5 +613,6 @@ export default function App() {
         </div>
       )}
     </div>
+    </>
   );
 }

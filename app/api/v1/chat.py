@@ -14,10 +14,13 @@ from app.services.calculator import FinancialCalculator
 logger = structlog.get_logger()
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
-def build_system_prompt(fase: str, session) -> str:
+def build_system_prompt(fase: str, session, user_name: str) -> str:
+    sapaan = user_name if user_name else "Kak/Ibu"
     base_context = f"""
-Kamu adalah AturModal, asisten finansial AI yang ramah untuk ibu-ibu penjual makanan UMKM Indonesia.
+Kamu adalah AturModal, asisten finansial AI yang ramah untuk pelaku UMKM kuliner.
 Gunakan bahasa Indonesia sehari-hari yang hangat, singkat, dan memotivasi.
+PENTING: Gunakan sapaan akrab "{sapaan}" saat berbicara dengan pengguna! Jangan selalu menggunakan 'Ibu' atau 'Bunda' secara sepihak.
+
 
 KONTEKS USER HARI INI:
 - Fase: {fase}
@@ -85,7 +88,7 @@ async def chat_endpoint(
     if not daily_session:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Session tidak ditemukan",
+            detail="Sesi tidak ditemukan atau Anda tidak memiliki akses",
         )
 
     logger.info(
@@ -100,7 +103,7 @@ async def chat_endpoint(
     chat_history = daily_session.messages[-8:] if daily_session.messages else []
 
     # 2. Build system instruction
-    system_instruction = build_system_prompt(daily_session.current_phase, daily_session)
+    system_instruction = build_system_prompt(daily_session.current_phase, daily_session, current_user.full_name)
 
     # 3. Save User message to DB
     user_message = ChatMessage(
@@ -201,7 +204,7 @@ async def chat_stream_endpoint(
     if not daily_session:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Session tidak ditemukan",
+            detail="Sesi tidak ditemukan atau Anda tidak memiliki akses",
         )
 
     active_api_key = request.headers.get("X-Gemini-Key")
@@ -224,7 +227,7 @@ async def chat_stream_endpoint(
     await db.refresh(daily_session)
 
     chat_history = daily_session.messages[-8:] if daily_session.messages else []
-    system_instruction = build_system_prompt(daily_session.current_phase, daily_session)
+    system_instruction = build_system_prompt(daily_session.current_phase, daily_session, current_user.full_name)
 
     async def event_generator():
         yield f"data: {json.dumps({'type': 'thinking'})}\\n\\n"

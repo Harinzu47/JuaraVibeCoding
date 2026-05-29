@@ -37,6 +37,7 @@ async def register(
         access_token=token,
         user_id=user.id,
         email=user.email,
+        full_name=user.full_name,
     )
 
 
@@ -73,4 +74,5 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db_session
         access_token=token,
         user_id=user.id,
         email=user.email,
+        full_name=user.full_name,
     )
