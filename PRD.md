@@ -1,7 +1,7 @@
-# Project Reference: DapurProfit AI (Dynamic COGS & Revenue Tracker)
+# Project Reference: AturModal (Dynamic COGS & Revenue Tracker)
 
 ## 1. Project Context
-DapurProfit AI is a Natural Language Processing (NLP) based financial assistant designed for home-based culinary businesses and Pre-Order (PO) systems. The application replaces traditional POS systems by allowing users to input daily grocery expenses and sales reports using conversational text. 
+AturModal is a Natural Language Processing (NLP) based financial assistant designed for home-based culinary businesses and Pre-Order (PO) systems. The application replaces traditional POS systems by allowing users to input daily grocery expenses and sales reports using conversational text. 
 
 The core engine must extract unstructured text to calculate exact Cost of Goods Sold (COGS/HPP) based on *used ingredients* versus *purchased ingredients*, provide dynamic pricing recommendations, and track daily net profit.
 

@@ -14,7 +14,7 @@ jobs:
       postgres:
         image: postgres:15
         env:
-          POSTGRES_DB: dapurprofit_test
+          POSTGRES_DB: aturmodal_test
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
         ports:
@@ -67,7 +67,7 @@ jobs:
 
     - name: Run Pytest
       env:
-        DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/dapurprofit_test
+        DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/aturmodal_test
         REDIS_URL: redis://localhost:6379
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         JWT_SECRET_KEY: testsecretkey1234567890123456789012345678901234567890

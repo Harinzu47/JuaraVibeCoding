@@ -1,10 +1,10 @@
 # FUNCTIONAL SPECIFICATION DOCUMENT (FSD)
-**Project Name:** DapurProfit AI (Dynamic COGS & Revenue Tracker)
+**Project Name:** AturModal (Dynamic COGS & Revenue Tracker)
 **Version:** 1.0
 **Document Type:** Technical & Functional Blueprint
 
 ## 1. System Overview
-DapurProfit AI adalah aplikasi web *single-page* berbasis *chat* yang mengandalkan LLM (Google Gemini API) sebagai pemroses logika utama (NLP *Engine*). Aplikasi ini tidak menggunakan basis data eksternal yang kompleks (seperti PostgreSQL/MySQL) untuk prototipe ini, melainkan memanfaatkan `st.session_state` di Streamlit untuk menyimpan memori komputasi finansial harian pengguna.
+AturModal adalah aplikasi web *single-page* berbasis *chat* yang mengandalkan LLM (Google Gemini API) sebagai pemroses logika utama (NLP *Engine*). Aplikasi ini tidak menggunakan basis data eksternal yang kompleks (seperti PostgreSQL/MySQL) untuk prototipe ini, melainkan memanfaatkan `st.session_state` di Streamlit untuk menyimpan memori komputasi finansial harian pengguna.
 
 ## 2. Tech Stack & Infrastructure
 *   **Frontend & State Management:** Python (Streamlit Framework).
@@ -15,7 +15,7 @@ DapurProfit AI adalah aplikasi web *single-page* berbasis *chat* yang mengandalk
 Antarmuka dibangun menggunakan komponen standar Streamlit (`st.chat_message`, `st.chat_input`, `st.sidebar`) untuk memastikan responsivitas di perangkat seluler.
 
 ### 3.1. Main Layout
-1.  **Header:** Judul aplikasi ("🍳 DapurProfit AI") dan subjudul singkat di area utama.
+1.  **Header:** Judul aplikasi ("🍳 AturModal") dan subjudul singkat di area utama.
 2.  **Sidebar (Panel Info Harian):**
     *   Menampilkan metrik state saat ini menggunakan `st.metric`.
     *   Indikator **"Modal Dikeluarkan Hari Ini"**: `Rp [total_belanja]` (Default: Rp 0).

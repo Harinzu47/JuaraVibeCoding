@@ -3,53 +3,52 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from httpx import AsyncClient
 
-
 @pytest.mark.asyncio
 async def test_chat_unauthorized(async_client: AsyncClient):
     response = await async_client.post(
         "/api/chat/",
         json={
             "message": "halo",
-            "chat_history": [],
-            "current_phase": "MORNING_COSTING",
-            "total_spending": 0,
-            "cogs_per_unit": 0,
+            "session_id": "dummy",
         },
     )
     assert response.status_code == 401
-
 
 @pytest.mark.asyncio
 @patch("app.api.v1.chat.gemini_service")
 async def test_chat_authorized_record_spending(
     mock_gemini_service, async_client: AsyncClient
 ):
-    # Setup mock service response
-    mock_gemini_service.generate_content = AsyncMock(
-        return_value={
-            "response": "Oke!",
-            "intent": "RECORD_SPENDING",
-            "total_spending": 50000,
-            "used_capital": 50000,
-            "cogs_per_unit": 5000,
-        }
-    )
-
     # Log in to get token
     login_res = await async_client.post(
         "/api/auth/login",
-        json={"email": "test@dapurprofit.com", "password": "password123"},
+        json={"email": "test@aturmodal.com", "password": "password123"},
     )
     token = login_res.json()["access_token"]
+    
+    # Create a session to get session_id
+    session_res = await async_client.get(
+        "/api/sessions/today",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    session_id = session_res.json()["id"]
+
+    # Setup mock service response for extraction
+    mock_gemini_service.extract_entities = AsyncMock(
+        return_value={
+            "intent": "RECORD_SPENDING",
+            "needs_clarification": False,
+            "items_extracted": [{"name": "ayam", "price": 50000, "qty": 1, "unit": "ekor"}],
+            "servings": 10,
+            "response_text": "Oke!"
+        }
+    )
 
     response = await async_client.post(
         "/api/chat/",
         json={
-            "message": "beli ayam 50rb",
-            "chat_history": [],
-            "current_phase": "MORNING_COSTING",
-            "total_spending": 0,
-            "cogs_per_unit": 0,
+            "message": "beli ayam 50rb jadi 10 porsi",
+            "session_id": session_id,
         },
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -60,88 +59,44 @@ async def test_chat_authorized_record_spending(
     assert data["cogs_per_unit"] == 5000
     assert data["current_phase"] == "EVENING_SALES"
 
-
 @pytest.mark.asyncio
 @patch("app.api.v1.chat.gemini_service")
-async def test_chat_authorized_correct_spending(
+async def test_chat_authorized_need_clarification(
     mock_gemini_service, async_client: AsyncClient
 ):
-    # Setup mock response for correction
-    mock_gemini_service.generate_content = AsyncMock(
+    # Setup mock for missing data
+    mock_gemini_service.extract_entities = AsyncMock(
         return_value={
-            "response": "Siap dikoreksi",
-            "intent": "CORRECT_SPENDING",
-            "correction_item": "ayam",
-            "correction_old_price": 50000,
-            "correction_new_price": 40000,
+            "intent": "ASK_CLARIFICATION",
+            "needs_clarification": True,
+            "response_text": "Jadinya berapa porsi Bu?",
         }
     )
 
-    # Log in to get token
+    # Log in
     login_res = await async_client.post(
         "/api/auth/login",
-        json={"email": "test@dapurprofit.com", "password": "password123"},
+        json={"email": "test@aturmodal.com", "password": "password123"},
     )
     token = login_res.json()["access_token"]
 
-    # Assume total spending was 100k, COGS was 10k
+    session_res = await async_client.get(
+        "/api/sessions/today",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    session_id = session_res.json()["id"]
+
     response = await async_client.post(
         "/api/chat/",
         json={
-            "message": "eh salah ayamnya 40rb bukan 50rb",
-            "chat_history": [],
-            "current_phase": "MORNING_COSTING",
-            "total_spending": 100000,
-            "cogs_per_unit": 10000,
+            "message": "beli telur 20rb",
+            "session_id": session_id,
         },
         headers={"Authorization": f"Bearer {token}"},
     )
 
     assert response.status_code == 200
     data = response.json()
-    assert data["is_correction"] is True
-    assert data["total_spending"] == 90000
-    assert data["correction_summary"] is not None
-
-
-@pytest.mark.asyncio
-@patch("app.api.v1.chat.gemini_service")
-async def test_chat_need_clarification(
-    mock_gemini_service, async_client: AsyncClient
-):
-    # Setup mock service response
-    mock_gemini_service.generate_content = AsyncMock(
-        return_value={
-            "response": "Berapa porsinya, Bu?",
-            "intent": "NEED_CLARIFICATION",
-            "total_spending": 0,
-            "used_capital": 0,
-            "cogs_per_unit": 0,
-        }
-    )
-
-    # Log in to get token
-    login_res = await async_client.post(
-        "/api/auth/login",
-        json={"email": "test@dapurprofit.com", "password": "password123"},
-    )
-    token = login_res.json()["access_token"]
-
-    response = await async_client.post(
-        "/api/chat/",
-        json={
-            "message": "beli ayam 50rb",
-            "chat_history": [],
-            "current_phase": "MORNING_COSTING",
-            "total_spending": 0,
-            "cogs_per_unit": 0,
-        },
-        headers={"Authorization": f"Bearer {token}"},
-    )
-
-    assert response.status_code == 200
-    data = response.json()
+    assert data["response"] == "Jadinya berapa porsi Bu?"
+    # Should not advance phase
     assert data["current_phase"] == "MORNING_COSTING"
-    assert data["cogs_per_unit"] == 0
-    assert data["total_spending"] == 0
-    assert data["response"] == "Berapa porsinya, Bu?"

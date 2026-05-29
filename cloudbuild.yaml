@@ -4,11 +4,11 @@ steps:
     args:
       - 'build'
       - '--tag'
-      - 'gcr.io/$PROJECT_ID/dapurprofit-ai:$COMMIT_SHA'
+      - 'gcr.io/$PROJECT_ID/aturmodal-ai:$COMMIT_SHA'
       - '--tag'
-      - 'gcr.io/$PROJECT_ID/dapurprofit-ai:latest'
+      - 'gcr.io/$PROJECT_ID/aturmodal-ai:latest'
       - '--cache-from'
-      - 'gcr.io/$PROJECT_ID/dapurprofit-ai:latest'
+      - 'gcr.io/$PROJECT_ID/aturmodal-ai:latest'
       - '.'
 
   # Step 2: Push semua tags ke Container Registry
@@ -16,7 +16,7 @@ steps:
     args:
       - 'push'
       - '--all-tags'
-      - 'gcr.io/$PROJECT_ID/dapurprofit-ai'
+      - 'gcr.io/$PROJECT_ID/aturmodal-ai'
 
   # Step 3: Deploy ke Cloud Run (asia-southeast2 = Jakarta)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -24,9 +24,9 @@ steps:
     args:
       - 'run'
       - 'deploy'
-      - 'dapurprofit-ai'
+      - 'aturmodal-ai'
       - '--image'
-      - 'gcr.io/$PROJECT_ID/dapurprofit-ai:$COMMIT_SHA'
+      - 'gcr.io/$PROJECT_ID/aturmodal-ai:$COMMIT_SHA'
       - '--region'
       - 'asia-southeast2'
       - '--platform'
@@ -48,13 +48,13 @@ steps:
       - 'ENVIRONMENT=production'
       # PENTING: Secrets (GEMINI_API_KEY, DATABASE_URL, JWT_SECRET_KEY, REDIS_URL)
       # TIDAK diset di sini — set via Secret Manager:
-      # gcloud run services update dapurprofit-ai \
+      # gcloud run services update aturmodal-ai \
       #   --set-secrets="GEMINI_API_KEY=gemini-api-key:latest,DATABASE_URL=db-url:latest,
       #                  JWT_SECRET_KEY=jwt-secret:latest,REDIS_URL=redis-url:latest" \
       #   --region asia-southeast2
 
 images:
-  - 'gcr.io/$PROJECT_ID/dapurprofit-ai'
+  - 'gcr.io/$PROJECT_ID/aturmodal-ai'
 
 options:
   logging: CLOUD_LOGGING_ONLY

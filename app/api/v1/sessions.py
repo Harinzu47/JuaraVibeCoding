@@ -42,12 +42,14 @@ async def get_today_session(
 ):
     """Fetch today's financial tracking session along with conversation history."""
     session = await session_repository.get_or_create_today_session(db, current_user.id)
+    try:
+        messages = [ChatMessageResponse.from_orm_model(m) for m in session.messages]
+    except Exception:
+        messages = []
+    base_resp = DailySessionResponse.model_validate(session)
+    resp = SessionWithHistoryResponse(**base_resp.model_dump(), messages=messages)
+
     await db.commit()  # Persist new session creation if it occurred
-
-    messages = [ChatMessageResponse.from_orm_model(m) for m in (session.messages or [])]
-
-    resp = SessionWithHistoryResponse.model_validate(session)
-    resp.messages = messages
     return resp
 
 
@@ -124,11 +126,56 @@ async def export_session_pdf(
             detail="Failed to generate PDF report. Please try again.",
         )
 
-    filename = f"daily-report-dapurprofit-{session_date}.pdf"
+    filename = f"daily-report-aturmodal-{session_date}.pdf"
     logger.info("pdf_exported", user_id=current_user.id, session_date=str(session_date))
 
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get(
+    "/export/csv",
+    summary="Download daily financial sessions as CSV",
+)
+async def export_sessions_csv(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session),
+):
+    """Generate and return a CSV file containing all financial sessions for the user."""
+    import csv
+    import io
+
+    sessions = await session_repository.list_by_user(db, current_user.id)
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Write header
+    writer.writerow([
+        "Tanggal", "Total Belanja", "Modal Terpakai", "HPP per Unit", 
+        "Total Pendapatan", "Laba Bersih", "Porsi Terjual", "Harga Jual", "Balik Modal"
+    ])
+    
+    for s in sessions:
+        writer.writerow([
+            s.session_date,
+            s.total_spending,
+            s.used_capital,
+            s.cogs_per_unit,
+            s.total_revenue or 0,
+            s.net_profit or 0,
+            s.portions_sold or 0,
+            s.selling_price or 0,
+            "Ya" if s.break_even else "Tidak"
+        ])
+    
+    filename = f"aturmodal_riwayat_{date.today()}.csv"
+    
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )

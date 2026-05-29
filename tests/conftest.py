@@ -31,11 +31,11 @@ async def prepare_database():
     # Create seed users for integration tests
     async with TestingSessionLocal() as session:
         user1 = User(
-            email="testuser@dapurprofit.com",
+            email="testuser@aturmodal.com",
             hashed_password=hash_password("password123"),
         )
         user2 = User(
-            email="test@dapurprofit.com", hashed_password=hash_password("password123")
+            email="test@aturmodal.com", hashed_password=hash_password("password123")
         )
         session.add(user1)
         session.add(user2)

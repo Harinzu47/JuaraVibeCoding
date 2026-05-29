@@ -6,7 +6,7 @@ from httpx import AsyncClient
 async def test_auth_login_success(async_client: AsyncClient):
     response = await async_client.post(
         "/api/auth/login",
-        json={"email": "testuser@dapurprofit.com", "password": "password123"},
+        json={"email": "testuser@aturmodal.com", "password": "password123"},
     )
     assert response.status_code == 200
     data = response.json()
@@ -18,7 +18,7 @@ async def test_auth_login_success(async_client: AsyncClient):
 async def test_auth_login_wrong_password(async_client: AsyncClient):
     response = await async_client.post(
         "/api/auth/login",
-        json={"email": "testuser@dapurprofit.com", "password": "wrongpassword"},
+        json={"email": "testuser@aturmodal.com", "password": "wrongpassword"},
     )
     assert response.status_code == 401
     assert response.json()["detail"] == "Incorrect email or password."
@@ -27,6 +27,6 @@ async def test_auth_login_wrong_password(async_client: AsyncClient):
 @pytest.mark.asyncio
 async def test_auth_login_missing_fields(async_client: AsyncClient):
     response = await async_client.post(
-        "/api/auth/login", json={"email": "testuser@dapurprofit.com"}
+        "/api/auth/login", json={"email": "testuser@aturmodal.com"}
     )
     assert response.status_code == 422

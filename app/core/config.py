@@ -15,13 +15,13 @@ class Settings(BaseSettings):
     APP_PORT: int = Field(default=8082)
 
     # CORS origins as comma-separated string
-    CORS_ORIGINS: str = Field(
+    ALLOWED_ORIGINS: str = Field(
         default="http://localhost:5173,http://127.0.0.1:5173,http://localhost:8081,http://localhost:8082"
     )
 
     # Database
     DATABASE_URL: str = Field(
-        default="postgresql+asyncpg://postgres:postgres@localhost:5432/dapurprofit"
+        default="postgresql+asyncpg://postgres:postgres@localhost:5432/aturmodal"
     )
 
     # Redis (Rate Limiting)
@@ -39,9 +39,9 @@ class Settings(BaseSettings):
     GEMINI_TIMEOUT_SECONDS: float = Field(default=30.0)
 
     @property
-    def cors_origins_list(self) -> List[str]:
+    def allowed_origins_list(self) -> List[str]:
         return [
-            origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()
+            origin.strip() for origin in self.ALLOWED_ORIGINS.split(",") if origin.strip()
         ]
 
 

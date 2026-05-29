@@ -17,11 +17,11 @@ async def seed():
     async with SessionLocal() as session:
         # Check if user exists
         result = await session.execute(
-            text("SELECT id FROM users WHERE email = 'loadtest@dapurprofit.com'")
+            text("SELECT id FROM users WHERE email = 'loadtest@aturmodal.com'")
         )
         if not result.scalar():
             user = User(
-                email="loadtest@dapurprofit.com",
+                email="loadtest@aturmodal.com",
                 hashed_password=hash_password("password123"),
             )
             session.add(user)

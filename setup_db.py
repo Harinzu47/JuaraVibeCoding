@@ -5,7 +5,7 @@ Cara pakai:
     py setup_db.py
 
 Script ini akan:
-1. Membuat database 'dapurprofit' jika belum ada
+1. Membuat database 'aturmodal' jika belum ada
 2. Menjalankan alembic revision --autogenerate
 3. Menjalankan alembic upgrade head
 4. Memverifikasi tabel terbentuk
@@ -25,21 +25,21 @@ if os.path.exists(".env"):
                 if len(parts) == 2:
                     os.environ[parts[0].strip()] = parts[1].strip()
 
-DB_URL = os.environ.get("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/dapurprofit")
+DB_URL = os.environ.get("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/aturmodal")
 
 print("=" * 60)
-print("DapurProfit AI - Database Setup Sprint 2")
+print("AturModal - Database Setup Sprint 2")
 print("=" * 60)
 
 # Step 1: Buat database
-print("\n[1/3] Membuat database 'dapurprofit'...")
+print("\n[1/3] Membuat database 'aturmodal'...")
 try:
     import asyncio
     import asyncpg
 
     async def create_db():
-        # Connect ke postgres (default db) untuk buat dapurprofit
-        conn_str = DB_URL.replace("postgresql+asyncpg://", "postgresql://").replace("/dapurprofit", "/postgres")
+        # Connect ke postgres (default db) untuk buat aturmodal
+        conn_str = DB_URL.replace("postgresql+asyncpg://", "postgresql://").replace("/aturmodal", "/postgres")
         
         # Parse credentials
         parts = conn_str.replace("postgresql://", "").split("@")
@@ -57,13 +57,13 @@ try:
         
         # Check if database exists
         exists = await conn.fetchval(
-            "SELECT 1 FROM pg_database WHERE datname = 'dapurprofit'"
+            "SELECT 1 FROM pg_database WHERE datname = 'aturmodal'"
         )
         if not exists:
-            await conn.execute("CREATE DATABASE dapurprofit")
-            print("   Database 'dapurprofit' berhasil dibuat!")
+            await conn.execute("CREATE DATABASE aturmodal")
+            print("   Database 'aturmodal' berhasil dibuat!")
         else:
-            print("   Database 'dapurprofit' sudah ada, skip.")
+            print("   Database 'aturmodal' sudah ada, skip.")
         
         await conn.close()
 
@@ -120,7 +120,7 @@ try:
             port=int(host_db[0].split(":")[1]) if ":" in host_db[0] else 5432,
             user=user_pass[0],
             password=user_pass[1] if len(user_pass) > 1 else "",
-            database="dapurprofit"
+            database="aturmodal"
         )
         
         tables = await conn.fetch(

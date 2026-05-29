@@ -1,12 +1,12 @@
 from locust import HttpUser, task, between
 
-class DapurProfitUser(HttpUser):
+class AturModalUser(HttpUser):
     wait_time = between(1, 3)
     token = None
 
     def on_start(self):
         response = self.client.post("/api/auth/login", json={
-            "email": "loadtest@dapurprofit.com",
+            "email": "loadtest@aturmodal.com",
             "password": "password123"
         })
         if response.status_code == 200:

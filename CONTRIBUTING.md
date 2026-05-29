@@ -1,6 +1,6 @@
-# Contributing to DapurProfit AI
+# Contributing to AturModal
 
-Thank you for your interest in contributing to DapurProfit AI! This document outlines guidelines and standards to ensure a clean, maintainable, and high-quality codebase.
+Thank you for your interest in contributing to AturModal! This document outlines guidelines and standards to ensure a clean, maintainable, and high-quality codebase.
 
 ## Code of Conduct
 

@@ -180,7 +180,7 @@
 <body>
 
   <div class="header">
-    <h1>DapurProfit AI</h1>
+    <h1>AturModal</h1>
     <div class="subtitle">Laporan Finansial Harian</div>
   </div>
 
@@ -267,7 +267,7 @@
   <div class="chat-log">
     {% for msg in messages %}
     <div class="chat-message {{ msg.role }}">
-      <div class="role">{{ 'Ibu' if msg.role == 'user' else 'DapurProfit AI' }}</div>
+      <div class="role">{{ 'Ibu' if msg.role == 'user' else 'AturModal' }}</div>
       <div class="content">{{ msg.content }}</div>
       <div class="time">{{ msg.created_at }}</div>
     </div>
@@ -278,7 +278,7 @@
   {% endif %}
 
   <div class="footer">
-    Laporan ini dibuat otomatis oleh DapurProfit AI &nbsp;&middot;&nbsp;
+    Laporan ini dibuat otomatis oleh AturModal &nbsp;&middot;&nbsp;
     Untuk keperluan pencatatan internal UMKM &nbsp;&middot;&nbsp;
     {{ generated_at }}
   </div>

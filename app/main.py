@@ -62,8 +62,8 @@ async def lifespan(app: FastAPI):
 # FASTAPI APP SETUP
 # =====================================================================
 app = FastAPI(
-    title="DapurProfit AI API",
-    description="Backend API for DapurProfit AI - Dynamic COGS & Revenue Tracker",
+    title="AturModal API",
+    description="Backend API for AturModal - Dynamic COGS & Revenue Tracker",
     version="3.0.0",
     lifespan=lifespan,
 )
@@ -78,7 +78,7 @@ app.add_middleware(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins_list,
+    allow_origins=settings.allowed_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -190,5 +190,5 @@ else:
     async def root():
         return {
             "status": "running",
-            "service": "DapurProfit AI API (Static files not built)",
+            "service": "AturModal API (Static files not built)",
         }

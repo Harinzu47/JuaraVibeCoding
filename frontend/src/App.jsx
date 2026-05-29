@@ -62,6 +62,9 @@ export default function App() {
   const [isSaveTodayOpen, setIsSaveTodayOpen] = useState(false);
   const [todaySessionName, setTodaySessionName] = useState('');
 
+  // Daily Session ID
+  const [currentSessionId, setCurrentSessionId] = useState(null);
+
   // JWT Token State
   const [token, setToken] = useState(() => {
     return localStorage.getItem('dp_token') || '';
@@ -108,8 +111,42 @@ export default function App() {
   useEffect(() => {
     if (token) {
       fetchHealthStatus();
+      fetchTodaySession();
     }
   }, [isSettingsOpen, token]);
+
+  const fetchTodaySession = async () => {
+    try {
+      const response = await fetch('/api/sessions/today', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setCurrentSessionId(data.id);
+        
+        // Sync local state from Single Source of Truth
+        if (data.total_spending > 0) setTotalSpending(data.total_spending);
+        if (data.used_capital > 0) setUsedCapital(data.used_capital);
+        if (data.cogs_per_unit > 0) setCogsPerUnit(data.cogs_per_unit);
+        if (data.current_phase) setCurrentPhase(data.current_phase);
+        
+        if (data.total_revenue !== null) setTodayRevenue(data.total_revenue);
+        if (data.net_profit !== null) setTodayProfit(data.net_profit);
+        if (data.portions_sold !== null) setTodaySoldQty(data.portions_sold);
+        if (data.selling_price !== null) setTodayPricePerUnit(data.selling_price);
+        if (data.break_even !== null) setTodayBreakeven(data.break_even);
+
+        if (data.messages && data.messages.length > 0) {
+          // Initialize chat history from DB
+          setChatHistory(data.messages.map(m => ({ role: m.role, content: m.content })));
+        } else if (chatHistory.length === 0) {
+           setChatHistory([{ role: 'assistant', content: 'Halo Ibu! Yuk catat belanja modal dan pemasukan hari ini, biar AturModal yang hitung semuanya otomatis. Sudah belanja apa saja pagi ini Bu?' }]);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load today's session:", err);
+    }
+  };
 
   useEffect(() => {
     localStorage.setItem('dp_today_revenue', todayRevenue.toString());
@@ -163,10 +200,7 @@ export default function App() {
         },
         body: JSON.stringify({
           message: messageText,
-          chat_history: chatHistory.map(h => ({ role: h.role, content: h.content })),
-          current_phase: currentPhase,
-          total_spending: totalSpending,
-          cogs_per_unit: cogsPerUnit
+          session_id: currentSessionId
         })
       });
 
@@ -183,14 +217,10 @@ export default function App() {
 
       const data = await response.json();
 
-      // Update state metrics from response
-      // Guard: only update if backend returns a meaningful non-zero value.
-      // Gemini NEED_CLARIFICATION and slot-filling responses return 0 for all fields.
-      // We must NOT overwrite real state with these zeros.
+      // Guard: only update if backend returns a meaningful value.
       if (data.total_spending !== null && data.total_spending !== undefined && data.total_spending > 0) {
         setTotalSpending(data.total_spending);
       }
-      // usedCapital: backend resets to 0 between requests, only update if > 0
       if (data.used_capital !== null && data.used_capital !== undefined && data.used_capital > 0) {
         setUsedCapital(data.used_capital);
       }
@@ -227,6 +257,104 @@ export default function App() {
         ...prev,
         { role: 'assistant', content: err.message, isError: true }
       ]);
+    }
+  };
+
+  const handleSendMessageStream = async (messageText) => {
+    const newUserMsg = { role: 'user', content: messageText };
+    setChatHistory(prev => [...prev, newUserMsg]);
+    setIsLoading(true);
+
+    const streamUrl = '/api/chat/stream';
+    let assistantMsgIndex = -1;
+
+    try {
+      const response = await fetch(streamUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          message: messageText,
+          session_id: currentSessionId
+        })
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          setToken('');
+          throw new Error('Your session has expired. Please log in again.');
+        }
+        throw new Error('Failed to connect with streaming assistant.');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let doneReading = false;
+      let buffer = '';
+
+      setChatHistory(prev => {
+        assistantMsgIndex = prev.length;
+        return [...prev, { role: 'assistant', content: 'Sedang berpikir...', isTyping: true }];
+      });
+
+      while (!doneReading) {
+        const { value, done } = await reader.read();
+        doneReading = done;
+        if (value) {
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const dataStr = line.replace('data: ', '').trim();
+              if (!dataStr) continue;
+              try {
+                const event = JSON.parse(dataStr);
+                
+                if (event.type === 'thinking') {
+                   // keep "Sedang berpikir..."
+                } else if (event.type === 'done') {
+                   const state = event.session_state;
+                   if (state.total_spending > 0) setTotalSpending(state.total_spending);
+                   if (state.used_capital > 0) setUsedCapital(state.used_capital);
+                   if (state.cogs_per_unit > 0) setCogsPerUnit(state.cogs_per_unit);
+                   if (state.current_phase) setCurrentPhase(state.current_phase);
+                   
+                   if (state.total_revenue !== null) setTodayRevenue(state.total_revenue);
+                   if (state.net_profit !== null) setTodayProfit(state.net_profit);
+                   if (state.portions_sold !== null) setTodaySoldQty(state.portions_sold);
+                   if (state.selling_price !== null) setTodayPricePerUnit(state.selling_price);
+                   if (state.break_even !== null) setTodayBreakeven(state.break_even);
+
+                   setChatHistory(prev => {
+                     const newHist = [...prev];
+                     newHist[assistantMsgIndex] = { role: 'assistant', content: state.response, isTyping: false };
+                     return newHist;
+                   });
+                } else if (event.type === 'error') {
+                   throw new Error(event.content);
+                }
+              } catch (e) {
+                console.error("SSE parse error", e, dataStr);
+              }
+            }
+          }
+        }
+      }
+      setIsLoading(false);
+    } catch (err) {
+      setIsLoading(false);
+      setChatHistory(prev => {
+        const newHist = [...prev];
+        if (assistantMsgIndex !== -1) {
+           newHist[assistantMsgIndex] = { role: 'assistant', content: err.message, isError: true, isTyping: false };
+           return newHist;
+        }
+        return [...prev, { role: 'assistant', content: err.message, isError: true }];
+      });
     }
   };
 
@@ -377,7 +505,7 @@ export default function App() {
         <ChatArea
           chatHistory={chatHistory}
           currentPhase={currentPhase}
-          onSendMessage={handleSendMessage}
+          onSendMessage={handleSendMessageStream}
           isLoading={isLoading}
           toggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
         />

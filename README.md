@@ -1,11 +1,11 @@
-# DapurProfit AI 🍳📈
+# AturModal 🍳📈
 
 [![CI Pipeline](https://github.com/Harinzu47/JuaraVibeCoding/actions/workflows/ci.yml/badge.svg)](https://github.com/Harinzu47/JuaraVibeCoding/actions/workflows/ci.yml)
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat&logo=fastapi)](https://fastapi.tiangolo.com)
 [![React](https://img.shields.io/badge/React-20232A?style=flat&logo=react&logoColor=61DAFB)](https://reactjs.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**DapurProfit AI** is a production-grade, micro-merchant financial assistant web application. It is designed to help local culinary home industries (e.g., *ibu-ibu penjual makanan*) track daily financial performance (total spending, dynamic Cost of Goods Sold / COGS, portion-level costing, daily revenue, and net profit evaluation) through a friendly conversational interface powered by Google Gemini AI with automatic structural data extraction.
+**AturModal** is a production-grade, micro-merchant financial assistant web application. It is designed to help local culinary home industries (e.g., *ibu-ibu penjual makanan*) track daily financial performance (total spending, dynamic Cost of Goods Sold / COGS, portion-level costing, daily revenue, and net profit evaluation) through a friendly conversational interface powered by Google Gemini AI with automatic structural data extraction.
 
 ---
 
@@ -14,7 +14,7 @@
 The backend is built with FastAPI following **Clean Architecture** patterns (separation of concerns, Repository Pattern for database decoupling, and Service Layer for third-party SDK integration):
 
 ```text
-DapurProfit AI/
+AturModal/
  ├── .github/
  │    └── workflows/
  │         └── ci.yml             # GitHub Actions running Linting & Tests
@@ -100,7 +100,7 @@ cp .env.example .env
 Define the following environment variables:
 | Variable Name | Required | Default Value | Description |
 | :--- | :--- | :--- | :--- |
-| `DATABASE_URL` | Yes | `postgresql+asyncpg://postgres:postgres@localhost:5432/dapurprofit` | Database connection URL |
+| `DATABASE_URL` | Yes | `postgresql+asyncpg://postgres:postgres@localhost:5432/aturmodal` | Database connection URL |
 | `GEMINI_API_KEY` | Yes | - | Google AI Studio Gemini API Key |
 | `JWT_SECRET_KEY` | Yes | - | Secret key used to sign JWT authorization tokens |
 | `JWT_ALGORITHM` | No | `HS256` | Hash algorithm for JWT signing |
@@ -200,12 +200,12 @@ To run the application inside Docker:
 
 1. **Build the Docker Image:**
    ```bash
-   docker build -t dapurprofit-backend .
+   docker build -t aturmodal-backend .
    ```
 
 2. **Run Backend Container:**
    ```bash
-   docker run -p 8082:8082 --env-file .env dapurprofit-backend
+   docker run -p 8082:8082 --env-file .env aturmodal-backend
    ```
 
 ---

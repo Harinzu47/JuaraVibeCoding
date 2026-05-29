@@ -1,6 +1,6 @@
-# DapurProfit AI Design System (Warm-Minimalist)
+# AturModal Design System (Warm-Minimalist)
 
-Dokumen ini mendefinisikan panduan visual, token desain, dan implementasi komponen UI untuk **DapurProfit AI** berbasis Streamlit. Referensi ini dibuat agar tampilan aplikasi konsisten dengan rancangan desain Stitch AI.
+Dokumen ini mendefinisikan panduan visual, token desain, dan implementasi komponen UI untuk **AturModal** berbasis Streamlit. Referensi ini dibuat agar tampilan aplikasi konsisten dengan rancangan desain Stitch AI.
 
 ---
 
@@ -45,7 +45,7 @@ Dokumen ini mendefinisikan panduan visual, token desain, dan implementasi kompon
 ---
 
 ## 3. Konfigurasi Streamlit Theme (`.streamlit/config.toml`)
-Untuk menerapkan tema dasar DapurProfit AI secara otomatis ke komponen bawaan Streamlit, gunakan konfigurasi berikut:
+Untuk menerapkan tema dasar AturModal secara otomatis ke komponen bawaan Streamlit, gunakan konfigurasi berikut:
 
 ```toml
 [theme]

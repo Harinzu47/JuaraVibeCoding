@@ -15,6 +15,22 @@ class DailySessionRepository(BaseRepository[DailySession]):
     def __init__(self):
         super().__init__(DailySession)
 
+    async def get_session_by_id(
+        self,
+        db: AsyncSession,
+        session_id: str,
+        user_id: str,
+        load_messages: bool = False,
+    ) -> Optional[DailySession]:
+        """Fetch a session by ID for a specific user, optionally loading messages."""
+        query = select(DailySession).where(
+            DailySession.id == session_id, DailySession.user_id == user_id
+        )
+        if load_messages:
+            query = query.options(selectinload(DailySession.messages))
+        result = await db.execute(query)
+        return result.scalar_one_or_none()
+
     async def get_by_date(
         self,
         db: AsyncSession,
@@ -52,7 +68,10 @@ class DailySessionRepository(BaseRepository[DailySession]):
             session = DailySession(
                 user_id=user_id, session_date=today, current_phase="MORNING_COSTING"
             )
-            session = await self.create(db, session)
+            db.add(session)
+            await db.flush()
+            db.expunge(session)
+            session = await self.get_by_date(db, user_id, today, load_messages=True)
         return session
 
 

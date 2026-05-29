@@ -10,10 +10,7 @@ class ChatMessageRequest(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
-    chat_history: list[ChatMessageRequest]
-    current_phase: str
-    total_spending: int
-    cogs_per_unit: int
+    session_id: str
 
 
 class ChatResponse(BaseModel):
