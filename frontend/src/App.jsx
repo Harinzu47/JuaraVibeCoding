@@ -5,6 +5,7 @@ import ChatArea from './components/ChatArea';
 import DashboardView from './components/DashboardView';
 import SettingsModal from './components/SettingsModal';
 import Login from './components/Login';
+import Register from './components/Register';
 
 export default function App() {
   // =====================================================================
@@ -69,6 +70,9 @@ export default function App() {
   const [token, setToken] = useState(() => {
     return localStorage.getItem('dp_token') || '';
   });
+
+  // Auth View State (login | register)
+  const [authView, setAuthView] = useState('login');
 
   // =====================================================================
   // 2. STATE SAVE EFFECT
@@ -479,7 +483,11 @@ export default function App() {
   };
 
   if (!token) {
-    return <Login setToken={setToken} />;
+    if (authView === 'login') {
+      return <Login setToken={setToken} onToggleView={() => setAuthView('register')} />;
+    } else {
+      return <Register setToken={setToken} onToggleView={() => setAuthView('login')} />;
+    }
   }
 
   return (

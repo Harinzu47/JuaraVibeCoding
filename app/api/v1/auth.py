@@ -24,10 +24,10 @@ async def register(
     existing_user = await user_repository.get_by_email(db, payload.email)
     if existing_user:
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="Email is already registered."
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Email is already registered."
         )
 
-    user = await user_repository.create_user(db, payload.email, payload.password)
+    user = await user_repository.create_user(db, payload.email, payload.password, payload.full_name)
     await db.commit()
 
     token = create_access_token(user.id, user.email)

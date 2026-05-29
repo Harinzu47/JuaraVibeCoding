@@ -293,9 +293,9 @@ class GeminiService:
         history_contents = []
         for msg in chat_history:
             role = "user" if msg.role == "user" else "model"
-            history_contents.append(types.Content(role=role, parts=[types.Part.from_text(msg.content)]))
+            history_contents.append(types.Content(role=role, parts=[types.Part.from_text(text=msg.content)]))
 
-        history_contents.append(types.Content(role="user", parts=[types.Part.from_text(current_message)]))
+        history_contents.append(types.Content(role="user", parts=[types.Part.from_text(text=current_message)]))
 
         config = types.GenerateContentConfig(
             system_instruction=system_instruction,
@@ -342,9 +342,9 @@ class GeminiService:
         history_contents = []
         for msg in chat_history:
             role = "user" if msg.role == "user" else "model"
-            history_contents.append(types.Content(role=role, parts=[types.Part.from_text(msg.content)]))
+            history_contents.append(types.Content(role=role, parts=[types.Part.from_text(text=msg.content)]))
 
-        history_contents.append(types.Content(role="user", parts=[types.Part.from_text(current_message)]))
+        history_contents.append(types.Content(role="user", parts=[types.Part.from_text(text=current_message)]))
 
         config = types.GenerateContentConfig(
             system_instruction=system_instruction,

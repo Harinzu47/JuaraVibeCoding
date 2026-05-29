@@ -20,10 +20,10 @@ class UserRepository(BaseRepository[User]):
         return result.scalar_one_or_none()
 
     async def create_user(
-        self, db: AsyncSession, email: str, password_raw: str
+        self, db: AsyncSession, email: str, password_raw: str, full_name: str | None = None
     ) -> User:
         """Create and hash password for a new user, then save to the database."""
-        user = User(email=email, hashed_password=hash_password(password_raw))
+        user = User(email=email, hashed_password=hash_password(password_raw), full_name=full_name)
         return await self.create(db, user)
 
 
