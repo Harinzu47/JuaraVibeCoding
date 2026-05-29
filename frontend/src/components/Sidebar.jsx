@@ -38,9 +38,9 @@ export default function Sidebar({
         <div className="sidebar-header">
           <div className="flex items-center gap-sm">
             <TrendingUp size={20} className="text-primary" />
-            <h2>DapurProfit AI</h2>
+            <h2>AturModal</h2>
           </div>
-          <p>Pantauan modal & belanjaan terkini Ibu.</p>
+          <p>Atur modal, raih untung maksimal.</p>
         </div>
 
         {/* Metrics Cards Container */}

@@ -141,7 +141,8 @@ class GeminiService:
         self, api_key: str, system_instruction: str, chat_history: list, message: str
     ) -> dict:
         """
-        Send a request to Gemini using the active model and return the structured JSON output.
+        Send a request to Gemini, automatically falling back through the model
+        chain if any model returns 503 (overload), 429 (quota), or times out.
         """
         client = genai.Client(api_key=api_key)
 
@@ -154,31 +155,69 @@ class GeminiService:
             )
         contents.append(types.Content(role="user", parts=[types.Part(text=message)]))
 
-        try:
-            response = await asyncio.wait_for(
-                asyncio.to_thread(
-                    client.models.generate_content,
-                    model=self.active_model,
-                    contents=contents,  # type: ignore[arg-type]
-                    config=types.GenerateContentConfig(
-                        system_instruction=system_instruction,
-                        response_mime_type="application/json",
-                        response_schema=GEMINI_RESPONSE_SCHEMA,
+        # Build a prioritised trial list: active model first, then the rest
+        if self.active_model in self.model_chain:
+            trial_models = [self.active_model] + [
+                m for m in self.model_chain if m != self.active_model
+            ]
+        else:
+            trial_models = self.model_chain
+
+        last_error: Exception = RuntimeError("No models available.")
+
+        for model_name in trial_models:
+            try:
+                logger.info(f"Trying Gemini model: {model_name}")
+                response = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        client.models.generate_content,
+                        model=model_name,
+                        contents=contents,  # type: ignore[arg-type]
+                        config=types.GenerateContentConfig(
+                            system_instruction=system_instruction,
+                            response_mime_type="application/json",
+                            response_schema=GEMINI_RESPONSE_SCHEMA,
+                        ),
                     ),
-                ),
-                timeout=self.timeout,
-            )
-            resp_text = response.text or "{}"
-            return json.loads(resp_text)
-        except asyncio.TimeoutError:
-            logger.error("Gemini API call timed out.")
-            raise TimeoutError("Gemini API request timed out.")
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to decode JSON from Gemini response: {e}")
-            raise ValueError("Gemini returned invalid JSON structure.")
-        except Exception as e:
-            logger.error(f"Gemini generation error: {e}")
-            raise e
+                    timeout=self.timeout,
+                )
+                resp_text = response.text or "{}"
+                result = json.loads(resp_text)
+                # Update active model to the one that succeeded
+                if model_name != self.active_model:
+                    logger.info(
+                        f"Switching active model from {self.active_model} → {model_name}"
+                    )
+                    self.active_model = model_name
+                return result
+
+            except asyncio.TimeoutError:
+                last_error = TimeoutError(f"Model {model_name} timed out.")
+                logger.warning(f"Timeout on model {model_name}, trying next...")
+                continue
+
+            except json.JSONDecodeError as e:
+                # JSON error is likely model-agnostic; raise immediately
+                logger.error(f"Failed to decode JSON from Gemini response: {e}")
+                raise ValueError("Gemini returned invalid JSON structure.")
+
+            except Exception as e:
+                err_str = str(e)
+                # 503 = overloaded, 429 = quota — try next model
+                if "503" in err_str or "UNAVAILABLE" in err_str or "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
+                    last_error = e
+                    logger.warning(
+                        f"Model {model_name} unavailable ({err_str[:80]}), trying next..."
+                    )
+                    continue
+                else:
+                    # Other errors (auth, bad request, etc.) — raise immediately
+                    logger.error(f"Gemini generation error on {model_name}: {e}")
+                    raise e
+
+        # All models exhausted
+        logger.error(f"All Gemini models failed. Last error: {last_error}")
+        raise last_error
 
 
 gemini_service = GeminiService()

@@ -2,7 +2,8 @@ import React from 'react';
 
 export default function MetricCard({ title, value, type }) {
   const formatRupiah = (val) => {
-    return 'Rp ' + val.toLocaleString('id-ID');
+    const safeVal = (val !== null && val !== undefined && !isNaN(val)) ? val : 0;
+    return 'Rp ' + Number(safeVal).toLocaleString('id-ID');
   };
 
   return (

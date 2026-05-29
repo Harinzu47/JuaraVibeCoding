@@ -40,20 +40,25 @@ def calculate_morning_metrics(
     current_total_spending: int,
     current_cogs_per_unit: int,
 ) -> tuple[int, int, int, str]:
-    """Validate and clamp financial inputs for the morning phase, returning updated values."""
+    """Validate and clamp financial inputs for the morning phase, returning updated values.
+
+    Only updates a field if Gemini returned a meaningful non-zero value.
+    This prevents NEED_CLARIFICATION responses (which return 0) from
+    overwriting valid state that was already accumulated.
+    """
+    # Start from current known state — Gemini output only overrides if > 0
     new_total_spending = current_total_spending
     new_used_capital = 0
     new_cogs = current_cogs_per_unit
     new_phase = "MORNING_COSTING"
 
-    if raw_total_spending is not None:
-        new_total_spending = max(0, int(raw_total_spending))
-    if raw_used_capital is not None:
-        new_used_capital = max(0, int(raw_used_capital))
-        # Clamping used capital to not exceed total spending
-        new_used_capital = min(new_used_capital, new_total_spending)
-    if raw_cogs_per_unit is not None:
-        new_cogs = max(0, int(raw_cogs_per_unit))
+    # Only accept Gemini's calculation if it produced a meaningful positive value
+    if raw_total_spending is not None and raw_total_spending > 0:
+        new_total_spending = int(raw_total_spending)
+    if raw_used_capital is not None and raw_used_capital > 0:
+        new_used_capital = min(int(raw_used_capital), new_total_spending)
+    if raw_cogs_per_unit is not None and raw_cogs_per_unit > 0:
+        new_cogs = int(raw_cogs_per_unit)
 
     # Transition to evening sales phase only if COGS is successfully computed
     if new_cogs > 0:

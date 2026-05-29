@@ -184,10 +184,22 @@ export default function App() {
       const data = await response.json();
 
       // Update state metrics from response
-      setTotalSpending(data.total_spending);
-      setUsedCapital(data.used_capital);
-      setCogsPerUnit(data.cogs_per_unit);
-      setCurrentPhase(data.current_phase);
+      // Guard: only update if backend returns a meaningful non-zero value.
+      // Gemini NEED_CLARIFICATION and slot-filling responses return 0 for all fields.
+      // We must NOT overwrite real state with these zeros.
+      if (data.total_spending !== null && data.total_spending !== undefined && data.total_spending > 0) {
+        setTotalSpending(data.total_spending);
+      }
+      // usedCapital: backend resets to 0 between requests, only update if > 0
+      if (data.used_capital !== null && data.used_capital !== undefined && data.used_capital > 0) {
+        setUsedCapital(data.used_capital);
+      }
+      if (data.cogs_per_unit !== null && data.cogs_per_unit !== undefined && data.cogs_per_unit > 0) {
+        setCogsPerUnit(data.cogs_per_unit);
+      }
+      if (data.current_phase) {
+        setCurrentPhase(data.current_phase);
+      }
 
       // Optional evening metrics
       if (data.total_revenue !== null && data.total_revenue !== undefined) {

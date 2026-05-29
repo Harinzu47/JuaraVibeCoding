@@ -146,7 +146,7 @@ export default function ChatArea({
     <main className="chat-main">
       {/* Mobile header */}
       <header className="mobile-topbar">
-        <span className="logo-text">DapurProfit AI</span>
+        <span className="logo-text">AturModal</span>
         <button className="icon-btn text-primary" onClick={toggleMobileSidebar}>
           <Menu size={24} />
         </button>
@@ -155,10 +155,10 @@ export default function ChatArea({
       {/* Chat Header (Desktop) */}
       <header className="chat-header">
         <h1 className="flex items-center gap-sm">
-          <span className="logo-emoji">🍳</span>
-          DapurProfit AI
+          <span className="logo-emoji">🧾</span>
+          AturModal
         </h1>
-        <p>Asisten Pintar Penghitung Modal & Laba Makanan</p>
+        <p>Atur modal, raih untung maksimal</p>
       </header>
 
       {/* Chat Container */}

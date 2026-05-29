@@ -40,7 +40,7 @@ export default function Login({ setToken }) {
           <div style={{ backgroundColor: 'var(--primary-color)', color: 'white', padding: '1rem', borderRadius: '50%' }}>
             <ChefHat size={40} />
           </div>
-          <h2 style={{ textAlign: 'center', margin: 0 }}>DapurProfit AI</h2>
+          <h2 style={{ textAlign: 'center', margin: 0 }}>AturModal</h2>
           <p style={{ textAlign: 'center', color: 'var(--text-light)', margin: 0 }}>Login untuk melanjutkan sesi kamu</p>
         </header>
 
